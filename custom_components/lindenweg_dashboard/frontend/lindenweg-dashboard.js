@@ -941,14 +941,14 @@ const callMediaVolume = (hass, entity_id, volume) => {
 const callSceneActivate = (hass, entity_id) => {
   void hass.callService("scene", "turn_on", {}, { entity_id });
 };
-var __defProp$A = Object.defineProperty;
-var __getOwnPropDesc$A = Object.getOwnPropertyDescriptor;
-var __decorateClass$A = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$A(target, key) : target;
+var __defProp$z = Object.defineProperty;
+var __getOwnPropDesc$z = Object.getOwnPropertyDescriptor;
+var __decorateClass$z = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$z(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$A(target, key, result);
+  if (kind && result) __defProp$z(target, key, result);
   return result;
 };
 const ICONS = {
@@ -1059,26 +1059,26 @@ LwIcon.styles = i$3`
       display: block;
     }
   `;
-__decorateClass$A([
+__decorateClass$z([
   n2({ type: String })
 ], LwIcon.prototype, "name", 2);
-__decorateClass$A([
+__decorateClass$z([
   n2({ type: Number })
 ], LwIcon.prototype, "size", 2);
-__decorateClass$A([
+__decorateClass$z([
   n2({ type: Number })
 ], LwIcon.prototype, "stroke", 2);
-LwIcon = __decorateClass$A([
+LwIcon = __decorateClass$z([
   t("lw-icon")
 ], LwIcon);
-var __defProp$z = Object.defineProperty;
-var __getOwnPropDesc$z = Object.getOwnPropertyDescriptor;
-var __decorateClass$z = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$z(target, key) : target;
+var __defProp$y = Object.defineProperty;
+var __getOwnPropDesc$y = Object.getOwnPropertyDescriptor;
+var __decorateClass$y = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$y(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$z(target, key, result);
+  if (kind && result) __defProp$y(target, key, result);
   return result;
 };
 let LwSidebar = class extends i {
@@ -1334,26 +1334,26 @@ LwSidebar.styles = i$3`
       background: var(--card);
     }
   `;
-__decorateClass$z([
+__decorateClass$y([
   n2({ attribute: false })
 ], LwSidebar.prototype, "hass", 2);
-__decorateClass$z([
+__decorateClass$y([
   n2({ attribute: false })
 ], LwSidebar.prototype, "config", 2);
-__decorateClass$z([
+__decorateClass$y([
   n2({ type: String })
 ], LwSidebar.prototype, "page", 2);
-LwSidebar = __decorateClass$z([
+LwSidebar = __decorateClass$y([
   t("lw-sidebar")
 ], LwSidebar);
-var __defProp$y = Object.defineProperty;
-var __getOwnPropDesc$y = Object.getOwnPropertyDescriptor;
-var __decorateClass$y = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$y(target, key) : target;
+var __defProp$x = Object.defineProperty;
+var __getOwnPropDesc$x = Object.getOwnPropertyDescriptor;
+var __decorateClass$x = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$x(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$y(target, key, result);
+  if (kind && result) __defProp$x(target, key, result);
   return result;
 };
 let LwTopbar = class extends i {
@@ -1531,32 +1531,32 @@ LwTopbar.styles = i$3`
       background: var(--text-faint);
     }
   `;
-__decorateClass$y([
+__decorateClass$x([
   n2({ attribute: false })
 ], LwTopbar.prototype, "hass", 2);
-__decorateClass$y([
+__decorateClass$x([
   n2({ attribute: false })
 ], LwTopbar.prototype, "config", 2);
-__decorateClass$y([
+__decorateClass$x([
   n2({ type: String })
 ], LwTopbar.prototype, "heading", 2);
-__decorateClass$y([
+__decorateClass$x([
   n2({ type: String })
 ], LwTopbar.prototype, "subtitle", 2);
-__decorateClass$y([
+__decorateClass$x([
   n2({ attribute: false })
 ], LwTopbar.prototype, "time", 2);
-LwTopbar = __decorateClass$y([
+LwTopbar = __decorateClass$x([
   t("lw-topbar")
 ], LwTopbar);
-var __defProp$x = Object.defineProperty;
-var __getOwnPropDesc$x = Object.getOwnPropertyDescriptor;
-var __decorateClass$x = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$x(target, key) : target;
+var __defProp$w = Object.defineProperty;
+var __getOwnPropDesc$w = Object.getOwnPropertyDescriptor;
+var __decorateClass$w = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$w(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$x(target, key, result);
+  if (kind && result) __defProp$w(target, key, result);
   return result;
 };
 let LwSectionHead = class extends i {
@@ -1604,23 +1604,23 @@ LwSectionHead.styles = i$3`
       flex-shrink: 0;
     }
   `;
-__decorateClass$x([
+__decorateClass$w([
   n2({ type: String })
 ], LwSectionHead.prototype, "sub", 2);
-__decorateClass$x([
+__decorateClass$w([
   n2({ type: String })
 ], LwSectionHead.prototype, "heading", 2);
-LwSectionHead = __decorateClass$x([
+LwSectionHead = __decorateClass$w([
   t("lw-section-head")
 ], LwSectionHead);
-var __defProp$w = Object.defineProperty;
-var __getOwnPropDesc$w = Object.getOwnPropertyDescriptor;
-var __decorateClass$w = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$w(target, key) : target;
+var __defProp$v = Object.defineProperty;
+var __getOwnPropDesc$v = Object.getOwnPropertyDescriptor;
+var __decorateClass$v = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$v(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$w(target, key, result);
+  if (kind && result) __defProp$v(target, key, result);
   return result;
 };
 const ICON_MAP = {
@@ -1825,23 +1825,23 @@ LwWeatherCard.styles = i$3`
       text-align: center;
     }
   `;
-__decorateClass$w([
+__decorateClass$v([
   n2({ attribute: false })
 ], LwWeatherCard.prototype, "hass", 2);
-__decorateClass$w([
+__decorateClass$v([
   n2({ type: String })
 ], LwWeatherCard.prototype, "entity", 2);
-LwWeatherCard = __decorateClass$w([
+LwWeatherCard = __decorateClass$v([
   t("lw-weather-card")
 ], LwWeatherCard);
-var __defProp$v = Object.defineProperty;
-var __getOwnPropDesc$v = Object.getOwnPropertyDescriptor;
-var __decorateClass$v = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$v(target, key) : target;
+var __defProp$u = Object.defineProperty;
+var __getOwnPropDesc$u = Object.getOwnPropertyDescriptor;
+var __decorateClass$u = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$u(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$v(target, key, result);
+  if (kind && result) __defProp$u(target, key, result);
   return result;
 };
 let LwPill = class extends i {
@@ -1868,23 +1868,23 @@ LwPill.styles = i$3`
       line-height: 1.2;
     }
   `;
-__decorateClass$v([
+__decorateClass$u([
   n2({ type: String })
 ], LwPill.prototype, "color", 2);
-__decorateClass$v([
+__decorateClass$u([
   n2({ type: Boolean })
 ], LwPill.prototype, "soft", 2);
-LwPill = __decorateClass$v([
+LwPill = __decorateClass$u([
   t("lw-pill")
 ], LwPill);
-var __defProp$u = Object.defineProperty;
-var __getOwnPropDesc$u = Object.getOwnPropertyDescriptor;
-var __decorateClass$u = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$u(target, key) : target;
+var __defProp$t = Object.defineProperty;
+var __getOwnPropDesc$t = Object.getOwnPropertyDescriptor;
+var __decorateClass$t = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$t(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$u(target, key, result);
+  if (kind && result) __defProp$t(target, key, result);
   return result;
 };
 let LwDualBars = class extends i {
@@ -1951,26 +1951,26 @@ LwDualBars.styles = i$3`
       right: 40%;
     }
   `;
-__decorateClass$u([
+__decorateClass$t([
   n2({ type: Array })
 ], LwDualBars.prototype, "pv", 2);
-__decorateClass$u([
+__decorateClass$t([
   n2({ type: Array })
 ], LwDualBars.prototype, "use", 2);
-__decorateClass$u([
+__decorateClass$t([
   n2({ type: Number })
 ], LwDualBars.prototype, "height", 2);
-LwDualBars = __decorateClass$u([
+LwDualBars = __decorateClass$t([
   t("lw-dual-bars")
 ], LwDualBars);
-var __defProp$t = Object.defineProperty;
-var __getOwnPropDesc$t = Object.getOwnPropertyDescriptor;
-var __decorateClass$t = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$t(target, key) : target;
+var __defProp$s = Object.defineProperty;
+var __getOwnPropDesc$s = Object.getOwnPropertyDescriptor;
+var __decorateClass$s = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$s(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$t(target, key, result);
+  if (kind && result) __defProp$s(target, key, result);
   return result;
 };
 let LwEnergyCard = class extends i {
@@ -2186,23 +2186,23 @@ LwEnergyCard.styles = i$3`
       padding: 40px 0;
     }
   `;
-__decorateClass$t([
+__decorateClass$s([
   n2({ attribute: false })
 ], LwEnergyCard.prototype, "hass", 2);
-__decorateClass$t([
+__decorateClass$s([
   n2({ attribute: false })
 ], LwEnergyCard.prototype, "energy", 2);
-LwEnergyCard = __decorateClass$t([
+LwEnergyCard = __decorateClass$s([
   t("lw-energy-card")
 ], LwEnergyCard);
-var __defProp$s = Object.defineProperty;
-var __getOwnPropDesc$s = Object.getOwnPropertyDescriptor;
-var __decorateClass$s = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$s(target, key) : target;
+var __defProp$r = Object.defineProperty;
+var __getOwnPropDesc$r = Object.getOwnPropertyDescriptor;
+var __decorateClass$r = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$r(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$s(target, key, result);
+  if (kind && result) __defProp$r(target, key, result);
   return result;
 };
 const ACTIVE_STATES = /* @__PURE__ */ new Set([
@@ -2226,7 +2226,7 @@ const ACTIVE_STATES = /* @__PURE__ */ new Set([
   "finishing"
 ]);
 const ERROR_STATES = /* @__PURE__ */ new Set(["error", "failure", "failed", "fault"]);
-const APPLIANCE_ICON$1 = {
+const APPLIANCE_ICON = {
   dishwasher: "water",
   geschirr: "water",
   washer: "washer",
@@ -2308,7 +2308,7 @@ let LwInfosCard = class extends i {
       const n3 = (a2.name || "").toLowerCase();
       let icon = a2.icon ?? "cog";
       if (!a2.icon) {
-        for (const [k2, v2] of Object.entries(APPLIANCE_ICON$1)) {
+        for (const [k2, v2] of Object.entries(APPLIANCE_ICON)) {
           if (n3.includes(k2)) {
             icon = v2;
             break;
@@ -2673,26 +2673,26 @@ LwInfosCard.styles = i$3`
       text-align: right;
     }
   `;
-__decorateClass$s([
+__decorateClass$r([
   n2({ attribute: false })
 ], LwInfosCard.prototype, "hass", 2);
-__decorateClass$s([
+__decorateClass$r([
   n2({ attribute: false })
 ], LwInfosCard.prototype, "config", 2);
-__decorateClass$s([
+__decorateClass$r([
   r()
 ], LwInfosCard.prototype, "_wasteToday", 2);
-LwInfosCard = __decorateClass$s([
+LwInfosCard = __decorateClass$r([
   t("lw-infos-card")
 ], LwInfosCard);
-var __defProp$r = Object.defineProperty;
-var __getOwnPropDesc$r = Object.getOwnPropertyDescriptor;
-var __decorateClass$r = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$r(target, key) : target;
+var __defProp$q = Object.defineProperty;
+var __getOwnPropDesc$q = Object.getOwnPropertyDescriptor;
+var __decorateClass$q = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$q(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$r(target, key, result);
+  if (kind && result) __defProp$q(target, key, result);
   return result;
 };
 const DEFAULT_SCENE_ICON = {
@@ -2820,26 +2820,26 @@ LwScenesRow.styles = i$3`
       text-align: center;
     }
   `;
-__decorateClass$r([
+__decorateClass$q([
   n2({ attribute: false })
 ], LwScenesRow.prototype, "hass", 2);
-__decorateClass$r([
+__decorateClass$q([
   n2({ type: Array })
 ], LwScenesRow.prototype, "scenes", 2);
-__decorateClass$r([
+__decorateClass$q([
   r()
 ], LwScenesRow.prototype, "_firing", 2);
-LwScenesRow = __decorateClass$r([
+LwScenesRow = __decorateClass$q([
   t("lw-scenes-row")
 ], LwScenesRow);
-var __defProp$q = Object.defineProperty;
-var __getOwnPropDesc$q = Object.getOwnPropertyDescriptor;
-var __decorateClass$q = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$q(target, key) : target;
+var __defProp$p = Object.defineProperty;
+var __getOwnPropDesc$p = Object.getOwnPropertyDescriptor;
+var __decorateClass$p = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$p(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$q(target, key, result);
+  if (kind && result) __defProp$p(target, key, result);
   return result;
 };
 let LwSlider = class extends i {
@@ -2938,38 +2938,38 @@ LwSlider.styles = i$3`
       box-shadow: var(--shadow-sm);
     }
   `;
-__decorateClass$q([
+__decorateClass$p([
   n2({ type: Number })
 ], LwSlider.prototype, "value", 2);
-__decorateClass$q([
+__decorateClass$p([
   n2({ type: Number })
 ], LwSlider.prototype, "min", 2);
-__decorateClass$q([
+__decorateClass$p([
   n2({ type: Number })
 ], LwSlider.prototype, "max", 2);
-__decorateClass$q([
+__decorateClass$p([
   n2({ type: Number })
 ], LwSlider.prototype, "height", 2);
-__decorateClass$q([
+__decorateClass$p([
   n2({ type: String })
 ], LwSlider.prototype, "accent", 2);
-__decorateClass$q([
+__decorateClass$p([
   n2({ type: Boolean })
 ], LwSlider.prototype, "knob", 2);
-__decorateClass$q([
+__decorateClass$p([
   e(".s")
 ], LwSlider.prototype, "_track", 2);
-LwSlider = __decorateClass$q([
+LwSlider = __decorateClass$p([
   t("lw-slider")
 ], LwSlider);
-var __defProp$p = Object.defineProperty;
-var __getOwnPropDesc$p = Object.getOwnPropertyDescriptor;
-var __decorateClass$p = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$p(target, key) : target;
+var __defProp$o = Object.defineProperty;
+var __getOwnPropDesc$o = Object.getOwnPropertyDescriptor;
+var __decorateClass$o = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$o(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$p(target, key, result);
+  if (kind && result) __defProp$o(target, key, result);
   return result;
 };
 let LwMediaCard = class extends i {
@@ -3386,29 +3386,29 @@ LwMediaCard.styles = i$3`
       text-align: center;
     }
   `;
-__decorateClass$p([
+__decorateClass$o([
   n2({ attribute: false })
 ], LwMediaCard.prototype, "hass", 2);
-__decorateClass$p([
+__decorateClass$o([
   n2({ attribute: false })
 ], LwMediaCard.prototype, "config", 2);
-__decorateClass$p([
+__decorateClass$o([
   r()
 ], LwMediaCard.prototype, "_selected", 2);
-__decorateClass$p([
+__decorateClass$o([
   r()
 ], LwMediaCard.prototype, "_syncOpen", 2);
-LwMediaCard = __decorateClass$p([
+LwMediaCard = __decorateClass$o([
   t("lw-media-card")
 ], LwMediaCard);
-var __defProp$o = Object.defineProperty;
-var __getOwnPropDesc$o = Object.getOwnPropertyDescriptor;
-var __decorateClass$o = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$o(target, key) : target;
+var __defProp$n = Object.defineProperty;
+var __getOwnPropDesc$n = Object.getOwnPropertyDescriptor;
+var __decorateClass$n = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$n(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$o(target, key, result);
+  if (kind && result) __defProp$n(target, key, result);
   return result;
 };
 let LwCamerasCard = class extends i {
@@ -3646,32 +3646,32 @@ LwCamerasCard.styles = i$3`
       font-family: 'Geist Mono', monospace;
     }
   `;
-__decorateClass$o([
+__decorateClass$n([
   n2({ attribute: false })
 ], LwCamerasCard.prototype, "hass", 2);
-__decorateClass$o([
+__decorateClass$n([
   n2({ type: Array })
 ], LwCamerasCard.prototype, "cameras", 2);
-__decorateClass$o([
+__decorateClass$n([
   n2({ attribute: false })
 ], LwCamerasCard.prototype, "cameraMotion", 2);
-__decorateClass$o([
+__decorateClass$n([
   r()
 ], LwCamerasCard.prototype, "_selected", 2);
-__decorateClass$o([
+__decorateClass$n([
   r()
 ], LwCamerasCard.prototype, "_manual", 2);
-LwCamerasCard = __decorateClass$o([
+LwCamerasCard = __decorateClass$n([
   t("lw-cameras-card")
 ], LwCamerasCard);
-var __defProp$n = Object.defineProperty;
-var __getOwnPropDesc$n = Object.getOwnPropertyDescriptor;
-var __decorateClass$n = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$n(target, key) : target;
+var __defProp$m = Object.defineProperty;
+var __getOwnPropDesc$m = Object.getOwnPropertyDescriptor;
+var __decorateClass$m = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$m(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$n(target, key, result);
+  if (kind && result) __defProp$m(target, key, result);
   return result;
 };
 let LwCalendarCard = class extends i {
@@ -3824,346 +3824,21 @@ LwCalendarCard.styles = i$3`
       color: var(--text-muted);
     }
   `;
-__decorateClass$n([
+__decorateClass$m([
   n2({ attribute: false })
 ], LwCalendarCard.prototype, "hass", 2);
-__decorateClass$n([
+__decorateClass$m([
   n2({ type: String })
 ], LwCalendarCard.prototype, "entity", 2);
-__decorateClass$n([
+__decorateClass$m([
   r()
 ], LwCalendarCard.prototype, "_events", 2);
-__decorateClass$n([
+__decorateClass$m([
   r()
 ], LwCalendarCard.prototype, "_loaded", 2);
-LwCalendarCard = __decorateClass$n([
+LwCalendarCard = __decorateClass$m([
   t("lw-calendar-card")
 ], LwCalendarCard);
-var __defProp$m = Object.defineProperty;
-var __getOwnPropDesc$m = Object.getOwnPropertyDescriptor;
-var __decorateClass$m = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$m(target, key) : target;
-  for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
-    if (decorator = decorators[i2])
-      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$m(target, key, result);
-  return result;
-};
-const APPLIANCE_ICON = {
-  dishwasher: "water",
-  washer: "washer",
-  washing_machine: "washer",
-  dryer: "fan",
-  oven: "oven",
-  fridge: "fridge",
-  vacuum: "vacuum"
-};
-let LwEventsCard = class extends i {
-  constructor() {
-    super(...arguments);
-    this.events = {};
-    this._waste = [];
-    this._lastWasteFetch = 0;
-  }
-  updated() {
-    if (!this.hass || !this.events?.waste_calendar) return;
-    if (Date.now() - this._lastWasteFetch < 30 * 60 * 1e3) return;
-    this._lastWasteFetch = Date.now();
-    void this._fetchWaste();
-  }
-  async _fetchWaste() {
-    if (!this.hass || !this.events.waste_calendar) return;
-    const start = /* @__PURE__ */ new Date();
-    const end = new Date(start);
-    end.setDate(end.getDate() + 7);
-    try {
-      const evs = await this.hass.callApi(
-        "GET",
-        `calendars/${this.events.waste_calendar}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
-      );
-      this._waste = Array.isArray(evs) ? evs.slice(0, 3) : [];
-    } catch {
-      this._waste = [];
-    }
-  }
-  _kindFromName(name) {
-    const n3 = name.toLowerCase();
-    if (n3.includes("spül") || n3.includes("dishwasher")) return "dishwasher";
-    if (n3.includes("trockner") || n3.includes("dryer")) return "dryer";
-    if (n3.includes("wäsche") || n3.includes("washer") || n3.includes("waschmaschine")) return "washer";
-    if (n3.includes("saug") || n3.includes("vacuum") || n3.includes("mäh") || n3.includes("mower")) return "vacuum";
-    if (n3.includes("oven") || n3.includes("backofen")) return "oven";
-    return "generic";
-  }
-  _readAppliance(a2) {
-    const stE = entityState(this.hass, a2.state_entity);
-    const state2 = stE?.state ?? "unknown";
-    const kind = this._kindFromName(a2.name);
-    const icon = a2.icon ?? APPLIANCE_ICON[kind] ?? "cog";
-    const progE = entityState(this.hass, a2.progress_entity);
-    let progress = progE ? parseFloat(progE.state) : NaN;
-    if (!Number.isFinite(progress)) progress = attrNum(stE, "progress", NaN);
-    const remE = entityState(this.hass, a2.remaining_entity);
-    let remaining = remE?.state ?? "";
-    if (!remaining) {
-      const mins = attrNum(stE, "remaining_time", NaN);
-      if (Number.isFinite(mins)) remaining = `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`;
-    }
-    const active = !["off", "idle", "standby", "unavailable", "unknown", "not_running", "docked"].includes(state2.toLowerCase());
-    return { state: state2, progress: Number.isFinite(progress) ? progress : 0, remaining, active, icon };
-  }
-  _stateLabel(s2) {
-    const map = {
-      running: "läuft",
-      run: "läuft",
-      cleaning: "reinigt",
-      mowing: "mäht",
-      paused: "Pause",
-      finished: "fertig",
-      in_use: "in Benutzung",
-      programmed: "programmiert",
-      off: "aus",
-      docked: "lädt",
-      idle: "bereit"
-    };
-    return map[s2.toLowerCase()] ?? s2;
-  }
-  _lowBatterySensors() {
-    if (!this.hass) return [];
-    const threshold = this.events.low_battery_threshold ?? 10;
-    const explicit = this.events.battery_entities ?? [];
-    const candidates = [];
-    if (explicit.length) {
-      explicit.forEach((id) => {
-        const e2 = entityState(this.hass, id);
-        if (e2) candidates.push(e2);
-      });
-    } else {
-      Object.values(this.hass.states).forEach((e2) => {
-        if (!e2.entity_id.startsWith("sensor.")) return;
-        if (e2.attributes.device_class !== "battery") return;
-        candidates.push(e2);
-      });
-    }
-    return candidates.filter((e2) => {
-      const v2 = parseFloat(e2.state);
-      return Number.isFinite(v2) && v2 <= threshold;
-    }).sort((a2, b2) => parseFloat(a2.state) - parseFloat(b2.state)).slice(0, 6);
-  }
-  _formatWasteDate(iso) {
-    const d2 = new Date(iso);
-    if (isNaN(d2.getTime())) return iso;
-    const today = /* @__PURE__ */ new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dd = new Date(d2);
-    dd.setHours(0, 0, 0, 0);
-    if (dd.getTime() === today.getTime()) return "Heute";
-    if (dd.getTime() === tomorrow.getTime()) return "Morgen";
-    return d2.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" });
-  }
-  render() {
-    const appliances = this.events.appliances ?? [];
-    const battery = this._lowBatterySensors();
-    const waste = this._waste;
-    const empty = !appliances.length && !battery.length && !waste.length;
-    return b`
-      <div class="card">
-        <lw-section-head sub="Aktuell" heading="Ereignisse"></lw-section-head>
-
-        ${empty ? b`<div class="empty">Keine aktiven Ereignisse</div>` : b`<div class="list">
-              ${appliances.length ? b`
-                    <div class="header-tag">Geräte</div>
-                    ${appliances.map((a2) => {
-      const r2 = this._readAppliance(a2);
-      return b`
-                        <div class=${"row" + (r2.active ? " active" : "")}>
-                          <div class=${"ico appliance" + (r2.active ? " active" : "")}>
-                            <lw-icon name=${r2.icon} .size=${16}></lw-icon>
-                          </div>
-                          <div class="body">
-                            <div class="name">${a2.name}</div>
-                            <div class="sub">
-                              ${this._stateLabel(r2.state)}${r2.remaining ? ` · noch ${r2.remaining}` : ""}
-                            </div>
-                            ${r2.active && r2.progress > 0 ? b`<div class="progress">
-                                  <div class="bar" style=${`width:${Math.min(100, r2.progress)}%`}></div>
-                                </div>` : A}
-                          </div>
-                          ${r2.active && r2.progress > 0 ? b`<div class="val">${Math.round(r2.progress)}%</div>` : A}
-                        </div>
-                      `;
-    })}
-                  ` : A}
-              ${waste.length ? b`
-                    <div class="header-tag">Abfall</div>
-                    ${waste.map(
-      (w2) => b`
-                        <div class="row">
-                          <div class="ico waste">
-                            <lw-icon name="package" .size=${16}></lw-icon>
-                          </div>
-                          <div class="body">
-                            <div class="name">${w2.summary}</div>
-                            <div class="sub">${this._formatWasteDate(w2.start)}</div>
-                          </div>
-                        </div>
-                      `
-    )}
-                  ` : A}
-              ${battery.length ? b`
-                    <div class="header-tag">Akkus schwach</div>
-                    ${battery.map(
-      (b$12) => b`
-                        <div class="row warn">
-                          <div class="ico battery">
-                            <lw-icon name="bolt" .size=${16}></lw-icon>
-                          </div>
-                          <div class="body">
-                            <div class="name">${friendlyName(b$12, b$12.entity_id)}</div>
-                            <div class="sub">${b$12.entity_id}</div>
-                          </div>
-                          <div class="val">${Math.round(parseFloat(b$12.state))}%</div>
-                        </div>
-                      `
-    )}
-                  ` : A}
-            </div>`}
-      </div>
-    `;
-  }
-};
-LwEventsCard.styles = i$3`
-    :host {
-      display: block;
-      height: 100%;
-    }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border-soft);
-      border-radius: 18px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      gap: 8px;
-      min-width: 0;
-    }
-    .list {
-      flex: 1;
-      min-height: 0;
-      overflow: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .list::-webkit-scrollbar {
-      width: 0;
-    }
-    .row {
-      display: flex;
-      align-items: center;
-      gap: 11px;
-      padding: 10px 12px;
-      background: var(--card-inset);
-      border-radius: 11px;
-      border: 1px solid var(--border-soft);
-    }
-    .row.active {
-      border-color: color-mix(in oklab, var(--accent) 35%, var(--border-soft));
-      background: color-mix(in oklab, var(--accent) 8%, var(--card-inset));
-    }
-    .row.warn {
-      border-color: color-mix(in oklab, var(--warn) 35%, var(--border-soft));
-      background: color-mix(in oklab, var(--warn) 8%, var(--card-inset));
-    }
-    .ico {
-      width: 30px;
-      height: 30px;
-      border-radius: 9px;
-      background: var(--card);
-      color: var(--text-muted);
-      display: grid;
-      place-items: center;
-      flex-shrink: 0;
-    }
-    .ico.appliance.active {
-      background: var(--accent);
-      color: white;
-    }
-    .ico.battery {
-      background: color-mix(in oklab, var(--warn) 18%, transparent);
-      color: var(--warn);
-    }
-    .ico.waste {
-      background: color-mix(in oklab, var(--amber) 18%, transparent);
-      color: var(--amber);
-    }
-    .body {
-      flex: 1;
-      min-width: 0;
-    }
-    .name {
-      font-size: 12.5px;
-      font-weight: 500;
-      letter-spacing: -0.005em;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .sub {
-      font-size: 10.5px;
-      color: var(--text-muted);
-      margin-top: 1px;
-    }
-    .progress {
-      margin-top: 5px;
-      height: 4px;
-      background: var(--card);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    .progress .bar {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 2px;
-      transition: width 0.4s ease-out;
-    }
-    .val {
-      font-family: 'Geist Mono', monospace;
-      font-size: 11px;
-      color: var(--text-muted);
-      min-width: 36px;
-      text-align: right;
-    }
-    .empty {
-      color: var(--text-muted);
-      font-size: 12px;
-      padding: 24px 0;
-      text-align: center;
-    }
-    .header-tag {
-      font-size: 10px;
-      color: var(--text-faint);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-weight: 500;
-      padding: 8px 4px 4px;
-    }
-  `;
-__decorateClass$m([
-  n2({ attribute: false })
-], LwEventsCard.prototype, "hass", 2);
-__decorateClass$m([
-  n2({ attribute: false })
-], LwEventsCard.prototype, "events", 2);
-__decorateClass$m([
-  r()
-], LwEventsCard.prototype, "_waste", 2);
-LwEventsCard = __decorateClass$m([
-  t("lw-events-card")
-], LwEventsCard);
 var __defProp$l = Object.defineProperty;
 var __getOwnPropDesc$l = Object.getOwnPropertyDescriptor;
 var __decorateClass$l = (decorators, target, key, kind) => {
@@ -4217,8 +3892,6 @@ let LwOverviewPage = class extends i {
             .cameraMotion=${ov.camera_motion ?? {}}
           ></lw-cameras-card>
           <lw-calendar-card class="a-calendar" .hass=${this.hass} .entity=${ov.calendar}></lw-calendar-card>
-
-          <lw-events-card class="a-events" .hass=${this.hass} .events=${ov.events ?? {}}></lw-events-card>
         </div>
       </div>
     `;
@@ -4231,10 +3904,10 @@ LwOverviewPage.styles = i$3`
       overflow: hidden;
     }
     .page {
-      padding: 22px 24px;
+      padding: 20px 22px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 18px;
       height: 100%;
       animation: rise 0.35s ease-out both;
     }
@@ -4243,30 +3916,20 @@ LwOverviewPage.styles = i$3`
       flex: 1;
       display: grid;
       grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
-      /* Explicit row heights:
-         - Row 1 (energy/weather/infos): tall card row
-         - Row 2 (scenes):                content-sized so the row matches its own height,
-                                          not stretched to grid-auto-rows minimum
-         - Row 3 (media/cameras/calendar): medium card row
-         - Row 4 (events):                medium card row
-      */
-      grid-template-rows: minmax(340px, 1.2fr) min-content minmax(260px, 1fr) minmax(220px, auto);
+      /* Three rows: tall card row · scenes (content-sized) · medium card row.
+         The fr units only apply to the two card rows so they fill available
+         space proportionally; scenes always sits at its natural height. */
+      grid-template-rows: minmax(360px, 1.25fr) min-content minmax(280px, 1fr);
       grid-template-areas:
         'energy weather infos'
         'scenes scenes scenes'
-        'media cameras calendar'
-        'events events events';
-      gap: 14px;
+        'media cameras calendar';
+      gap: 18px;
       min-height: 0;
       overflow: auto;
-      padding-right: 4px;
     }
     .grid::-webkit-scrollbar {
-      width: 6px;
-    }
-    .grid::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 3px;
+      width: 0;
     }
 
     .a-energy { grid-area: energy; min-width: 0; }
@@ -4276,7 +3939,6 @@ LwOverviewPage.styles = i$3`
     .a-media { grid-area: media; min-width: 0; }
     .a-cameras { grid-area: cameras; min-width: 0; }
     .a-calendar { grid-area: calendar; min-width: 0; }
-    .a-events { grid-area: events; min-width: 0; }
 
     @keyframes rise {
       from { opacity: 0; transform: translateY(6px); }
@@ -4292,14 +3954,14 @@ LwOverviewPage.styles = i$3`
           'weather infos'
           'scenes scenes'
           'media cameras'
-          'calendar events';
+          'calendar calendar';
       }
     }
     @media (max-width: 760px) {
       .grid {
         grid-template-columns: minmax(0, 1fr);
         grid-template-areas:
-          'energy' 'weather' 'infos' 'scenes' 'media' 'cameras' 'calendar' 'events';
+          'energy' 'weather' 'infos' 'scenes' 'media' 'cameras' 'calendar';
       }
     }
   `;
@@ -6741,10 +6403,10 @@ LwRoomPage.styles = i$3`
       overflow: hidden;
     }
     .page {
-      padding: 22px 24px;
+      padding: 20px 22px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 18px;
       height: 100%;
       animation: rise 0.35s ease-out both;
     }
@@ -6752,23 +6414,18 @@ LwRoomPage.styles = i$3`
       flex: 1;
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
-      grid-auto-rows: minmax(280px, auto);
-      gap: 14px;
+      grid-auto-rows: minmax(300px, 1fr);
+      gap: 18px;
       min-height: 0;
       overflow: auto;
-      padding-right: 4px;
     }
     .grid::-webkit-scrollbar {
-      width: 6px;
-    }
-    .grid::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 3px;
+      width: 0;
     }
     .bottom-right {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 14px;
+      gap: 18px;
       min-height: 0;
     }
     .bottom-right > * {
@@ -8266,7 +7923,7 @@ __decorateClass([
 LindenwegDashboard = __decorateClass([
   t("lindenweg-dashboard")
 ], LindenwegDashboard);
-const VERSION = "0.2.1";
+const VERSION = "0.2.2";
 console.info(
   `%c LINDENWEG-DASHBOARD %c v${VERSION} `,
   "background:#7e8f70;color:#fbf7ee;padding:2px 6px;border-radius:4px 0 0 4px;font-weight:600",

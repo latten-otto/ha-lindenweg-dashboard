@@ -11,7 +11,6 @@ import '../modules/ov-scenes';
 import '../modules/ov-media';
 import '../modules/ov-cameras';
 import '../modules/ov-calendar';
-import '../modules/ov-events';
 
 @customElement('lw-overview-page')
 export class LwOverviewPage extends LitElement {
@@ -26,10 +25,10 @@ export class LwOverviewPage extends LitElement {
       overflow: hidden;
     }
     .page {
-      padding: 22px 24px;
+      padding: 20px 22px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 18px;
       height: 100%;
       animation: rise 0.35s ease-out both;
     }
@@ -38,30 +37,20 @@ export class LwOverviewPage extends LitElement {
       flex: 1;
       display: grid;
       grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
-      /* Explicit row heights:
-         - Row 1 (energy/weather/infos): tall card row
-         - Row 2 (scenes):                content-sized so the row matches its own height,
-                                          not stretched to grid-auto-rows minimum
-         - Row 3 (media/cameras/calendar): medium card row
-         - Row 4 (events):                medium card row
-      */
-      grid-template-rows: minmax(340px, 1.2fr) min-content minmax(260px, 1fr) minmax(220px, auto);
+      /* Three rows: tall card row · scenes (content-sized) · medium card row.
+         The fr units only apply to the two card rows so they fill available
+         space proportionally; scenes always sits at its natural height. */
+      grid-template-rows: minmax(360px, 1.25fr) min-content minmax(280px, 1fr);
       grid-template-areas:
         'energy weather infos'
         'scenes scenes scenes'
-        'media cameras calendar'
-        'events events events';
-      gap: 14px;
+        'media cameras calendar';
+      gap: 18px;
       min-height: 0;
       overflow: auto;
-      padding-right: 4px;
     }
     .grid::-webkit-scrollbar {
-      width: 6px;
-    }
-    .grid::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 3px;
+      width: 0;
     }
 
     .a-energy { grid-area: energy; min-width: 0; }
@@ -71,7 +60,6 @@ export class LwOverviewPage extends LitElement {
     .a-media { grid-area: media; min-width: 0; }
     .a-cameras { grid-area: cameras; min-width: 0; }
     .a-calendar { grid-area: calendar; min-width: 0; }
-    .a-events { grid-area: events; min-width: 0; }
 
     @keyframes rise {
       from { opacity: 0; transform: translateY(6px); }
@@ -87,14 +75,14 @@ export class LwOverviewPage extends LitElement {
           'weather infos'
           'scenes scenes'
           'media cameras'
-          'calendar events';
+          'calendar calendar';
       }
     }
     @media (max-width: 760px) {
       .grid {
         grid-template-columns: minmax(0, 1fr);
         grid-template-areas:
-          'energy' 'weather' 'infos' 'scenes' 'media' 'cameras' 'calendar' 'events';
+          'energy' 'weather' 'infos' 'scenes' 'media' 'cameras' 'calendar';
       }
     }
   `;
@@ -139,8 +127,6 @@ export class LwOverviewPage extends LitElement {
             .cameraMotion=${ov.camera_motion ?? {}}
           ></lw-cameras-card>
           <lw-calendar-card class="a-calendar" .hass=${this.hass} .entity=${ov.calendar}></lw-calendar-card>
-
-          <lw-events-card class="a-events" .hass=${this.hass} .events=${ov.events ?? {}}></lw-events-card>
         </div>
       </div>
     `;

@@ -24,10 +24,10 @@ export class LwRoomPage extends LitElement {
       overflow: hidden;
     }
     .page {
-      padding: 22px 24px;
+      padding: 20px 22px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 18px;
       height: 100%;
       animation: rise 0.35s ease-out both;
     }
@@ -35,23 +35,18 @@ export class LwRoomPage extends LitElement {
       flex: 1;
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
-      grid-auto-rows: minmax(280px, auto);
-      gap: 14px;
+      grid-auto-rows: minmax(300px, 1fr);
+      gap: 18px;
       min-height: 0;
       overflow: auto;
-      padding-right: 4px;
     }
     .grid::-webkit-scrollbar {
-      width: 6px;
-    }
-    .grid::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 3px;
+      width: 0;
     }
     .bottom-right {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 14px;
+      gap: 18px;
       min-height: 0;
     }
     .bottom-right > * {
