@@ -37,15 +37,16 @@ export class LwOverviewPage extends LitElement {
       flex: 1;
       display: grid;
       grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
-      /* Three rows: tall card row · scenes (content-sized) · medium card row.
-         The fr units only apply to the two card rows so they fill available
-         space proportionally; scenes always sits at its natural height. */
-      grid-template-rows: minmax(360px, 1.25fr) min-content minmax(280px, 1fr);
+      /* Three rows: tall card row, scenes (130px min + auto-grow), medium
+         card row. Explicit minmax for the scenes row prevents the previous
+         min-content collapse where the Lit child reported 0 height and the
+         card painted over adjacent rows. */
+      grid-template-rows: minmax(360px, 1fr) minmax(130px, auto) minmax(300px, 1fr);
       grid-template-areas:
         'energy weather infos'
         'scenes scenes scenes'
         'media cameras calendar';
-      gap: 18px;
+      gap: 20px;
       min-height: 0;
       overflow: auto;
     }

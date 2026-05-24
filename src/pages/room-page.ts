@@ -2,7 +2,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import type { HomeAssistant } from '../hass/hass-types';
 import type { PanelConfig, RoomConfig } from '../types/config';
-import { entityState, attrNum, isOn } from '../hass/entity-helpers';
+import { entityState, attrNum } from '../hass/entity-helpers';
 import '../panel/lw-topbar';
 import '../modules/room-climate';
 import '../modules/room-lights';
@@ -31,50 +31,31 @@ export class LwRoomPage extends LitElement {
       height: 100%;
       animation: rise 0.35s ease-out both;
     }
-    .grid {
+    /* Each row is a flex container. Cards have flex weights but only the cards
+       that actually have data are rendered. So if a room has no climate, the
+       lights card takes the whole row instead of leaving an empty 1fr cell. */
+    .row {
+      display: flex;
+      gap: 20px;
+      min-height: 0;
+    }
+    .row.top {
+      flex: 1.1;
+    }
+    .row.bottom {
       flex: 1;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
-      grid-auto-rows: minmax(300px, 1fr);
-      gap: 18px;
-      min-height: 0;
-      overflow: auto;
     }
-    .grid::-webkit-scrollbar {
-      width: 0;
-    }
-    .bottom-right {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 18px;
-      min-height: 0;
-    }
-    .bottom-right > * {
-      min-width: 0;
+    .col-1 { flex: 1; min-width: 0; }
+    .col-1-5 { flex: 1.5; min-width: 0; }
+    .col-2 { flex: 2; min-width: 0; }
+    .row > * { min-width: 0; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     @media (max-width: 900px) {
-      .grid {
-        grid-template-columns: minmax(0, 1fr);
-      }
-      .bottom-right {
-        grid-template-columns: minmax(0, 1fr);
-      }
-    }
-    @keyframes rise {
-      from {
-        opacity: 0;
-        transform: translateY(6px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    @media (max-width: 1100px) {
-      .grid {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto;
-      }
+      .row { flex-direction: column; }
+      .col-1, .col-1-5, .col-2 { flex: none; }
     }
   `;
 
@@ -105,6 +86,102 @@ export class LwRoomPage extends LitElement {
       </div>`;
     }
 
+    const hasClimate = !!room.climate;
+    const hasLights = !!(room.lights?.length || room.scenes?.length);
+    const hasExtras = !!room.extras?.length;
+    const hasCovers = !!(room.covers?.length);
+    const hasMedia = !!room.media_player;
+
+    // ---- Top row: climate + lights, or full-width lights if no climate ----
+    const topRow = (() => {
+      if (hasClimate && hasLights) {
+        return html`<div class="row top">
+          <div class="col-1">
+            <lw-climate-card .hass=${this.hass} .entity=${room.climate}></lw-climate-card>
+          </div>
+          <div class="col-1-5">
+            <lw-lights-card
+              .hass=${this.hass}
+              .lights=${room.lights ?? []}
+              .scenes=${room.scenes ?? []}
+              .roomName=${room.name}
+            ></lw-lights-card>
+          </div>
+        </div>`;
+      }
+      if (hasClimate) {
+        return html`<div class="row top">
+          <div class="col-2">
+            <lw-climate-card .hass=${this.hass} .entity=${room.climate}></lw-climate-card>
+          </div>
+        </div>`;
+      }
+      if (hasLights) {
+        return html`<div class="row top">
+          <div class="col-2">
+            <lw-lights-card
+              .hass=${this.hass}
+              .lights=${room.lights ?? []}
+              .scenes=${room.scenes ?? []}
+              .roomName=${room.name}
+            ></lw-lights-card>
+          </div>
+        </div>`;
+      }
+      return nothing;
+    })();
+
+    // ---- Bottom row: extras + (blinds + media-mini), with various fallbacks ----
+    const bottomRightHasBoth = hasCovers && hasMedia;
+    const bottomRight = bottomRightHasBoth
+      ? html`<div class="row" style="gap:20px; flex:1; min-height:0">
+          <div class="col-1">
+            <lw-blinds-card .hass=${this.hass} .covers=${room.covers!}></lw-blinds-card>
+          </div>
+          <div class="col-1">
+            <lw-media-mini .hass=${this.hass} .entity=${room.media_player!}></lw-media-mini>
+          </div>
+        </div>`
+      : hasCovers
+        ? html`<lw-blinds-card .hass=${this.hass} .covers=${room.covers!}></lw-blinds-card>`
+        : hasMedia
+          ? html`<lw-media-mini .hass=${this.hass} .entity=${room.media_player!}></lw-media-mini>`
+          : nothing;
+
+    const bottomRow = (() => {
+      if (hasExtras && bottomRight !== nothing) {
+        return html`<div class="row bottom">
+          <div class="col-1">
+            <lw-room-extras
+              .hass=${this.hass}
+              .extras=${room.extras ?? []}
+              heading="Geräte"
+              sub="Räumlich"
+            ></lw-room-extras>
+          </div>
+          <div class="col-1-5">${bottomRight}</div>
+        </div>`;
+      }
+      if (hasExtras) {
+        return html`<div class="row bottom">
+          <div class="col-2">
+            <lw-room-extras
+              .hass=${this.hass}
+              .extras=${room.extras ?? []}
+              heading="Geräte"
+              sub="Räumlich"
+            ></lw-room-extras>
+          </div>
+        </div>`;
+      }
+      if (bottomRight !== nothing) {
+        return html`<div class="row bottom">
+          <div class="col-2">${bottomRight}</div>
+        </div>`;
+      }
+      return nothing;
+    })();
+
     return html`
       <div class="page">
         <lw-topbar
@@ -115,37 +192,8 @@ export class LwRoomPage extends LitElement {
           .time=${this.time}
         ></lw-topbar>
 
-        <div class="grid">
-          <lw-climate-card .hass=${this.hass} .entity=${room.climate}></lw-climate-card>
-
-          ${room.lights?.length || room.scenes?.length
-            ? html`<lw-lights-card
-                .hass=${this.hass}
-                .lights=${room.lights ?? []}
-                .scenes=${room.scenes ?? []}
-                .roomName=${room.name}
-              ></lw-lights-card>`
-            : html`<div></div>`}
-
-          <lw-room-extras
-            .hass=${this.hass}
-            .extras=${room.extras ?? []}
-            heading="Geräte"
-            sub="Räumlich"
-          ></lw-room-extras>
-
-          <div class="bottom-right">
-            ${room.covers?.length
-              ? html`<lw-blinds-card .hass=${this.hass} .covers=${room.covers}></lw-blinds-card>`
-              : nothing}
-            ${room.media_player
-              ? html`<lw-media-mini
-                  .hass=${this.hass}
-                  .entity=${room.media_player}
-                ></lw-media-mini>`
-              : nothing}
-          </div>
-        </div>
+        ${topRow}
+        ${bottomRow}
       </div>
     `;
   }

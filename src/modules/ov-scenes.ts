@@ -32,12 +32,18 @@ export class LwScenesRow extends LitElement {
   static styles = css`
     :host {
       display: block;
+      /* Backstop: the grid row this lives in needs a known height, otherwise
+         min-content can collapse it to 0 and the card paints over adjacent
+         rows visually. */
+      min-height: 130px;
     }
     .card {
       background: var(--card);
       border: 1px solid var(--border-soft);
       border-radius: 18px;
       padding: 16px;
+      height: 100%;
+      box-sizing: border-box;
     }
     .grid {
       display: grid;

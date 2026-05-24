@@ -2764,12 +2764,18 @@ let LwScenesRow = class extends i {
 LwScenesRow.styles = i$3`
     :host {
       display: block;
+      /* Backstop: the grid row this lives in needs a known height, otherwise
+         min-content can collapse it to 0 and the card paints over adjacent
+         rows visually. */
+      min-height: 130px;
     }
     .card {
       background: var(--card);
       border: 1px solid var(--border-soft);
       border-radius: 18px;
       padding: 16px;
+      height: 100%;
+      box-sizing: border-box;
     }
     .grid {
       display: grid;
@@ -3916,15 +3922,16 @@ LwOverviewPage.styles = i$3`
       flex: 1;
       display: grid;
       grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
-      /* Three rows: tall card row · scenes (content-sized) · medium card row.
-         The fr units only apply to the two card rows so they fill available
-         space proportionally; scenes always sits at its natural height. */
-      grid-template-rows: minmax(360px, 1.25fr) min-content minmax(280px, 1fr);
+      /* Three rows: tall card row, scenes (130px min + auto-grow), medium
+         card row. Explicit minmax for the scenes row prevents the previous
+         min-content collapse where the Lit child reported 0 height and the
+         card painted over adjacent rows. */
+      grid-template-rows: minmax(360px, 1fr) minmax(130px, auto) minmax(300px, 1fr);
       grid-template-areas:
         'energy weather infos'
         'scenes scenes scenes'
         'media cameras calendar';
-      gap: 18px;
+      gap: 20px;
       min-height: 0;
       overflow: auto;
     }
@@ -6357,6 +6364,90 @@ let LwRoomPage = class extends i {
         <div>Raum „${this.roomKey}" nicht in Config gefunden.</div>
       </div>`;
     }
+    const hasClimate = !!room.climate;
+    const hasLights = !!(room.lights?.length || room.scenes?.length);
+    const hasExtras = !!room.extras?.length;
+    const hasCovers = !!room.covers?.length;
+    const hasMedia = !!room.media_player;
+    const topRow = (() => {
+      if (hasClimate && hasLights) {
+        return b`<div class="row top">
+          <div class="col-1">
+            <lw-climate-card .hass=${this.hass} .entity=${room.climate}></lw-climate-card>
+          </div>
+          <div class="col-1-5">
+            <lw-lights-card
+              .hass=${this.hass}
+              .lights=${room.lights ?? []}
+              .scenes=${room.scenes ?? []}
+              .roomName=${room.name}
+            ></lw-lights-card>
+          </div>
+        </div>`;
+      }
+      if (hasClimate) {
+        return b`<div class="row top">
+          <div class="col-2">
+            <lw-climate-card .hass=${this.hass} .entity=${room.climate}></lw-climate-card>
+          </div>
+        </div>`;
+      }
+      if (hasLights) {
+        return b`<div class="row top">
+          <div class="col-2">
+            <lw-lights-card
+              .hass=${this.hass}
+              .lights=${room.lights ?? []}
+              .scenes=${room.scenes ?? []}
+              .roomName=${room.name}
+            ></lw-lights-card>
+          </div>
+        </div>`;
+      }
+      return A;
+    })();
+    const bottomRightHasBoth = hasCovers && hasMedia;
+    const bottomRight = bottomRightHasBoth ? b`<div class="row" style="gap:20px; flex:1; min-height:0">
+          <div class="col-1">
+            <lw-blinds-card .hass=${this.hass} .covers=${room.covers}></lw-blinds-card>
+          </div>
+          <div class="col-1">
+            <lw-media-mini .hass=${this.hass} .entity=${room.media_player}></lw-media-mini>
+          </div>
+        </div>` : hasCovers ? b`<lw-blinds-card .hass=${this.hass} .covers=${room.covers}></lw-blinds-card>` : hasMedia ? b`<lw-media-mini .hass=${this.hass} .entity=${room.media_player}></lw-media-mini>` : A;
+    const bottomRow = (() => {
+      if (hasExtras && bottomRight !== A) {
+        return b`<div class="row bottom">
+          <div class="col-1">
+            <lw-room-extras
+              .hass=${this.hass}
+              .extras=${room.extras ?? []}
+              heading="Geräte"
+              sub="Räumlich"
+            ></lw-room-extras>
+          </div>
+          <div class="col-1-5">${bottomRight}</div>
+        </div>`;
+      }
+      if (hasExtras) {
+        return b`<div class="row bottom">
+          <div class="col-2">
+            <lw-room-extras
+              .hass=${this.hass}
+              .extras=${room.extras ?? []}
+              heading="Geräte"
+              sub="Räumlich"
+            ></lw-room-extras>
+          </div>
+        </div>`;
+      }
+      if (bottomRight !== A) {
+        return b`<div class="row bottom">
+          <div class="col-2">${bottomRight}</div>
+        </div>`;
+      }
+      return A;
+    })();
     return b`
       <div class="page">
         <lw-topbar
@@ -6367,31 +6458,8 @@ let LwRoomPage = class extends i {
           .time=${this.time}
         ></lw-topbar>
 
-        <div class="grid">
-          <lw-climate-card .hass=${this.hass} .entity=${room.climate}></lw-climate-card>
-
-          ${room.lights?.length || room.scenes?.length ? b`<lw-lights-card
-                .hass=${this.hass}
-                .lights=${room.lights ?? []}
-                .scenes=${room.scenes ?? []}
-                .roomName=${room.name}
-              ></lw-lights-card>` : b`<div></div>`}
-
-          <lw-room-extras
-            .hass=${this.hass}
-            .extras=${room.extras ?? []}
-            heading="Geräte"
-            sub="Räumlich"
-          ></lw-room-extras>
-
-          <div class="bottom-right">
-            ${room.covers?.length ? b`<lw-blinds-card .hass=${this.hass} .covers=${room.covers}></lw-blinds-card>` : A}
-            ${room.media_player ? b`<lw-media-mini
-                  .hass=${this.hass}
-                  .entity=${room.media_player}
-                ></lw-media-mini>` : A}
-          </div>
-        </div>
+        ${topRow}
+        ${bottomRow}
       </div>
     `;
   }
@@ -6410,50 +6478,31 @@ LwRoomPage.styles = i$3`
       height: 100%;
       animation: rise 0.35s ease-out both;
     }
-    .grid {
+    /* Each row is a flex container. Cards have flex weights but only the cards
+       that actually have data are rendered. So if a room has no climate, the
+       lights card takes the whole row instead of leaving an empty 1fr cell. */
+    .row {
+      display: flex;
+      gap: 20px;
+      min-height: 0;
+    }
+    .row.top {
+      flex: 1.1;
+    }
+    .row.bottom {
       flex: 1;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
-      grid-auto-rows: minmax(300px, 1fr);
-      gap: 18px;
-      min-height: 0;
-      overflow: auto;
     }
-    .grid::-webkit-scrollbar {
-      width: 0;
-    }
-    .bottom-right {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 18px;
-      min-height: 0;
-    }
-    .bottom-right > * {
-      min-width: 0;
+    .col-1 { flex: 1; min-width: 0; }
+    .col-1-5 { flex: 1.5; min-width: 0; }
+    .col-2 { flex: 2; min-width: 0; }
+    .row > * { min-width: 0; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     @media (max-width: 900px) {
-      .grid {
-        grid-template-columns: minmax(0, 1fr);
-      }
-      .bottom-right {
-        grid-template-columns: minmax(0, 1fr);
-      }
-    }
-    @keyframes rise {
-      from {
-        opacity: 0;
-        transform: translateY(6px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    @media (max-width: 1100px) {
-      .grid {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto;
-      }
+      .row { flex-direction: column; }
+      .col-1, .col-1-5, .col-2 { flex: none; }
     }
   `;
 __decorateClass$5([
@@ -7923,7 +7972,7 @@ __decorateClass([
 LindenwegDashboard = __decorateClass([
   t("lindenweg-dashboard")
 ], LindenwegDashboard);
-const VERSION = "0.2.2";
+const VERSION = "0.2.3";
 console.info(
   `%c LINDENWEG-DASHBOARD %c v${VERSION} `,
   "background:#7e8f70;color:#fbf7ee;padding:2px 6px;border-radius:4px 0 0 4px;font-weight:600",
