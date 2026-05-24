@@ -25,66 +25,74 @@ export class LwOverviewPage extends LitElement {
       overflow: hidden;
     }
     .page {
-      padding: 20px 22px;
+      padding: 20px 24px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 22px;
       height: 100%;
+      overflow: auto;
       animation: rise 0.35s ease-out both;
     }
-
-    .grid {
-      flex: 1;
-      display: grid;
-      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
-      /* Three rows: tall card row, scenes (130px min + auto-grow), medium
-         card row. Explicit minmax for the scenes row prevents the previous
-         min-content collapse where the Lit child reported 0 height and the
-         card painted over adjacent rows. */
-      grid-template-rows: minmax(360px, 1fr) minmax(130px, auto) minmax(300px, 1fr);
-      grid-template-areas:
-        'energy weather infos'
-        'scenes scenes scenes'
-        'media cameras calendar';
-      gap: 20px;
-      min-height: 0;
-      overflow: auto;
-    }
-    .grid::-webkit-scrollbar {
+    .page::-webkit-scrollbar {
       width: 0;
     }
+    .page > lw-topbar {
+      flex: 0 0 auto;
+    }
 
-    .a-energy { grid-area: energy; min-width: 0; }
-    .a-weather { grid-area: weather; min-width: 0; }
-    .a-infos { grid-area: infos; min-width: 0; }
-    .a-scenes { grid-area: scenes; min-width: 0; }
-    .a-media { grid-area: media; min-width: 0; }
-    .a-cameras { grid-area: cameras; min-width: 0; }
-    .a-calendar { grid-area: calendar; min-width: 0; }
+    /* Each .band is a horizontal flex row of cards. */
+    .band {
+      display: flex;
+      gap: 22px;
+      min-width: 0;
+    }
+    .band > * {
+      min-width: 0;
+    }
+
+    /* Top band: energy (1.4fr) · weather (1fr) · infos (1fr) — at least 380px tall. */
+    .band.top {
+      flex: 0 0 auto;
+      min-height: 380px;
+    }
+    .band.top > .e { flex: 1.4; display: flex; }
+    .band.top > .w { flex: 1; display: flex; }
+    .band.top > .i { flex: 1; display: flex; }
+    .band.top > * > * { width: 100%; }
+
+    /* Middle band: scenes spans full width, content-sized. */
+    .band.middle {
+      flex: 0 0 auto;
+    }
+    .band.middle > * { flex: 1; }
+
+    /* Bottom band: media (1.4fr) · cameras (1fr) · calendar (1fr) — at least 320px. */
+    .band.bottom {
+      flex: 1 1 auto;
+      min-height: 320px;
+    }
+    .band.bottom > .m { flex: 1.4; display: flex; }
+    .band.bottom > .k { flex: 1; display: flex; }
+    .band.bottom > .c { flex: 1; display: flex; }
+    .band.bottom > * > * { width: 100%; }
 
     @keyframes rise {
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
+    /* Stack on narrower screens. */
     @media (max-width: 1280px) {
-      .grid {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        grid-template-rows: auto;
-        grid-template-areas:
-          'energy energy'
-          'weather infos'
-          'scenes scenes'
-          'media cameras'
-          'calendar calendar';
-      }
+      .band.top { flex-wrap: wrap; }
+      .band.top > .e { flex: 1 1 100%; }
+      .band.top > .w, .band.top > .i { flex: 1 1 calc(50% - 11px); }
+      .band.bottom { flex-wrap: wrap; }
+      .band.bottom > .m { flex: 1 1 100%; }
+      .band.bottom > .k, .band.bottom > .c { flex: 1 1 calc(50% - 11px); }
     }
     @media (max-width: 760px) {
-      .grid {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-areas:
-          'energy' 'weather' 'infos' 'scenes' 'media' 'cameras' 'calendar';
-      }
+      .band { flex-direction: column; }
+      .band > * { flex: 1 1 auto !important; }
     }
   `;
 
@@ -113,21 +121,26 @@ export class LwOverviewPage extends LitElement {
           .time=${this.time}
         ></lw-topbar>
 
-        <div class="grid">
-          <lw-energy-card class="a-energy" .hass=${this.hass} .energy=${ov.energy ?? {}}></lw-energy-card>
-          <lw-weather-card class="a-weather" .hass=${this.hass} .entity=${ov.weather}></lw-weather-card>
-          <lw-infos-card class="a-infos" .hass=${this.hass} .config=${this.config}></lw-infos-card>
+        <div class="band top">
+          <div class="e"><lw-energy-card .hass=${this.hass} .energy=${ov.energy ?? {}}></lw-energy-card></div>
+          <div class="w"><lw-weather-card .hass=${this.hass} .entity=${ov.weather}></lw-weather-card></div>
+          <div class="i"><lw-infos-card .hass=${this.hass} .config=${this.config}></lw-infos-card></div>
+        </div>
 
-          <lw-scenes-row class="a-scenes" .hass=${this.hass} .scenes=${ov.scenes ?? []}></lw-scenes-row>
+        <div class="band middle">
+          <lw-scenes-row .hass=${this.hass} .scenes=${ov.scenes ?? []}></lw-scenes-row>
+        </div>
 
-          <lw-media-card class="a-media" .hass=${this.hass} .config=${this.config}></lw-media-card>
-          <lw-cameras-card
-            class="a-cameras"
-            .hass=${this.hass}
-            .cameras=${ov.cameras ?? []}
-            .cameraMotion=${ov.camera_motion ?? {}}
-          ></lw-cameras-card>
-          <lw-calendar-card class="a-calendar" .hass=${this.hass} .entity=${ov.calendar}></lw-calendar-card>
+        <div class="band bottom">
+          <div class="m"><lw-media-card .hass=${this.hass} .config=${this.config}></lw-media-card></div>
+          <div class="k">
+            <lw-cameras-card
+              .hass=${this.hass}
+              .cameras=${ov.cameras ?? []}
+              .cameraMotion=${ov.camera_motion ?? {}}
+            ></lw-cameras-card>
+          </div>
+          <div class="c"><lw-calendar-card .hass=${this.hass} .entity=${ov.calendar}></lw-calendar-card></div>
         </div>
       </div>
     `;
