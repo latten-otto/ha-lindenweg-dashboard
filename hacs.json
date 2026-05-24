@@ -1,0 +1,8 @@
+{
+  "name": "Lindenweg Dashboard",
+  "render_readme": true,
+  "filename": "lindenweg-dashboard.js",
+  "content_in_root": true,
+  "zip_release": false,
+  "homeassistant": "2024.4.0"
+}
