@@ -1,0 +1,13 @@
+{
+  "domain": "lindenweg_dashboard",
+  "name": "Lindenweg Dashboard",
+  "version": "0.2.0",
+  "documentation": "https://github.com/latten-otto/ha-lindenweg-dashboard",
+  "issue_tracker": "https://github.com/latten-otto/ha-lindenweg-dashboard/issues",
+  "codeowners": ["@latten-otto"],
+  "dependencies": ["http", "frontend", "websocket_api"],
+  "requirements": [],
+  "config_flow": true,
+  "iot_class": "local_push",
+  "integration_type": "service"
+}

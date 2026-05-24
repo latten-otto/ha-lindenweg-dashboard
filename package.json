@@ -1,11 +1,11 @@
 {
   "name": "ha-lindenweg-dashboard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Skandinavisch / Muji-inspiriertes Home Assistant Custom Panel — Räume, Szenen, Energie, Wetter — voll grafisch konfigurierbar",
   "type": "module",
   "main": "dist/lindenweg-dashboard.js",
   "scripts": {
-    "build": "vite build && cp dist/lindenweg-dashboard.js ./lindenweg-dashboard.js",
+    "build": "vite build && mkdir -p custom_components/lindenweg_dashboard/frontend && cp dist/lindenweg-dashboard.js custom_components/lindenweg_dashboard/frontend/lindenweg-dashboard.js",
     "watch": "vite build --watch",
     "dev": "vite",
     "typecheck": "tsc --noEmit",

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Lindenweg Dashboard installieren",
+        "description": "Dieser Schritt erstellt das Dashboard und fügt es als Panel „Dashboard“ in deine HA-Sidebar ein. Alle weiteren Einstellungen erfolgen direkt im Dashboard — keine YAML nötig."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Die Integration ist bereits installiert."
+    }
+  }
+}

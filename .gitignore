@@ -9,3 +9,6 @@ coverage/
 .vscode/
 dist/
 lindenweg-dashboard.js.map
+__pycache__/
+*.pyc
+.pytest_cache/

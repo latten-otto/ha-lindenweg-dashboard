@@ -1,8 +1,9 @@
-import { LitElement, html, css, unsafeCSS } from 'lit';
+import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { HomeAssistant, PanelInfo } from '../hass/hass-types';
 import type { PanelConfig, ThemeName } from '../types/config';
 import { DEFAULT_CONFIG } from '../types/config';
+import { configStore } from '../hass/config-store';
 import { themeLinen, themeWalnut } from '../styles/themes';
 import { baseStyles } from '../styles/base';
 import { injectFontImport } from '../styles/font-import';
@@ -10,7 +11,7 @@ import './lw-sidebar';
 import './lw-topbar';
 import '../pages/overview-page';
 import '../pages/room-page';
-import '../editor/dashboard-editor';
+import '../pages/edit-page';
 
 @customElement('lindenweg-dashboard')
 export class LindenwegDashboard extends LitElement {
@@ -21,9 +22,11 @@ export class LindenwegDashboard extends LitElement {
 
   @state() private _page = 'overview';
   @state() private _time = new Date();
-  @state() private _configOpen = false;
+  @state() private _config: PanelConfig = DEFAULT_CONFIG;
+  @state() private _editMode = false;
 
   private _tick?: number;
+  private _unsubConfig?: () => void;
 
   static styles = [
     themeLinen,
@@ -59,40 +62,53 @@ export class LindenwegDashboard extends LitElement {
     this._tick = window.setInterval(() => (this._time = new Date()), 20_000);
     this._readPageFromHash();
     window.addEventListener('hashchange', this._readPageFromHash);
+    this._unsubConfig = configStore.subscribe((cfg) => {
+      this._config = cfg;
+    });
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this._tick) clearInterval(this._tick);
     window.removeEventListener('hashchange', this._readPageFromHash);
+    this._unsubConfig?.();
+    configStore.detach();
+  }
+
+  willUpdate(changed: Map<string, unknown>) {
+    if (changed.has('hass') && this.hass) {
+      configStore.attach(this.hass);
+    }
   }
 
   private _readPageFromHash = (): void => {
     const m = location.hash.match(/#\/([\w-]+)/);
-    if (m) this._page = m[1];
+    if (m) {
+      if (m[1] === 'edit') this._editMode = true;
+      else this._page = m[1];
+    }
   };
 
-  private _config(): PanelConfig {
-    const fromPanel = this.panel?.config ?? ({} as Partial<PanelConfig>);
-    return {
-      ...DEFAULT_CONFIG,
-      ...fromPanel,
-      overview: { ...DEFAULT_CONFIG.overview, ...(fromPanel.overview ?? {}) },
-      rooms: fromPanel.rooms ?? {},
-    };
-  }
-
   private _theme(): ThemeName {
-    return this._config().theme === 'walnut' ? 'walnut' : 'linen';
+    return this._config.theme === 'walnut' ? 'walnut' : 'linen';
   }
 
   private _navigate = (e: CustomEvent<{ page: string }>) => {
+    this._editMode = false;
     this._page = e.detail.page;
     location.hash = `#/${e.detail.page}`;
   };
 
+  private _openEdit = () => {
+    this._editMode = true;
+  };
+
+  private _closeEdit = () => {
+    this._editMode = false;
+  };
+
   render() {
-    const config = this._config();
+    const config = this._config;
     const theme = this._theme();
     const room = config.rooms[this._page];
     return html`
@@ -100,31 +116,30 @@ export class LindenwegDashboard extends LitElement {
         <lw-sidebar
           .hass=${this.hass}
           .config=${config}
-          .page=${this._page}
+          .page=${this._editMode ? '__edit__' : this._page}
           @navigate=${this._navigate}
-          @open-config=${() => (this._configOpen = true)}
+          @open-config=${this._openEdit}
         ></lw-sidebar>
         <div class="main">
-          ${this._page === 'overview' || !room
-            ? html`<lw-overview-page
+          ${this._editMode
+            ? html`<lw-edit-page
                 .hass=${this.hass}
                 .config=${config}
-                .time=${this._time}
-              ></lw-overview-page>`
-            : html`<lw-room-page
-                .hass=${this.hass}
-                .config=${config}
-                .roomKey=${this._page}
-                .time=${this._time}
-              ></lw-room-page>`}
+                @close=${this._closeEdit}
+              ></lw-edit-page>`
+            : this._page === 'overview' || !room
+              ? html`<lw-overview-page
+                  .hass=${this.hass}
+                  .config=${config}
+                  .time=${this._time}
+                ></lw-overview-page>`
+              : html`<lw-room-page
+                  .hass=${this.hass}
+                  .config=${config}
+                  .roomKey=${this._page}
+                  .time=${this._time}
+                ></lw-room-page>`}
         </div>
-        ${this._configOpen
-          ? html`<lw-config-helper
-              .hass=${this.hass}
-              .config=${config}
-              @close=${() => (this._configOpen = false)}
-            ></lw-config-helper>`
-          : null}
       </div>
     `;
   }

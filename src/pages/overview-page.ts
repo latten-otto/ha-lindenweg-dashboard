@@ -11,6 +11,7 @@ import '../modules/ov-scenes';
 import '../modules/ov-media';
 import '../modules/ov-cameras';
 import '../modules/ov-calendar';
+import '../modules/ov-events';
 
 @customElement('lw-overview-page')
 export class LwOverviewPage extends LitElement {
@@ -35,13 +36,36 @@ export class LwOverviewPage extends LitElement {
     .grid {
       flex: 1;
       display: grid;
-      grid-template-columns: 1.55fr 1fr 1fr;
-      grid-template-rows: minmax(360px, 1.3fr) auto minmax(260px, 1fr);
-      gap: 12px;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+      grid-auto-rows: minmax(280px, auto);
+      gap: 14px;
       min-height: 0;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .grid::-webkit-scrollbar {
+      width: 6px;
+    }
+    .grid::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
     }
     .full {
       grid-column: 1 / -1;
+    }
+    .full > * {
+      display: block;
+      height: 100%;
+    }
+    @media (max-width: 1280px) {
+      .grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      }
+    }
+    @media (max-width: 760px) {
+      .grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
     }
     @keyframes rise {
       from {
@@ -100,8 +124,16 @@ export class LwOverviewPage extends LitElement {
           </div>
 
           <lw-media-card .hass=${this.hass} .config=${this.config}></lw-media-card>
-          <lw-cameras-card .hass=${this.hass} .cameras=${ov.cameras ?? []}></lw-cameras-card>
+          <lw-cameras-card
+            .hass=${this.hass}
+            .cameras=${ov.cameras ?? []}
+            .cameraMotion=${ov.camera_motion ?? {}}
+          ></lw-cameras-card>
           <lw-calendar-card .hass=${this.hass} .entity=${ov.calendar}></lw-calendar-card>
+
+          <div class="full">
+            <lw-events-card .hass=${this.hass} .events=${ov.events ?? {}}></lw-events-card>
+          </div>
         </div>
       </div>
     `;

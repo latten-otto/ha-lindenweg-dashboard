@@ -2,25 +2,12 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import type { HomeAssistant } from '../hass/hass-types';
 import type { ExtraConfig } from '../types/config';
-import { entityState, isOn, friendlyName, callToggle } from '../hass/entity-helpers';
 import '../shared/lw-section-head';
+import './extras/lw-extra-vacuum';
+import './extras/lw-extra-mower';
+import './extras/lw-extra-sprinkler';
+import './extras/lw-extra-fan';
 import '../shared/lw-feature-tile';
-
-const EXTRA_ICON: Record<string, string> = {
-  tv: 'tv',
-  fireplace: 'fire',
-  fan: 'fan',
-  'towel-warmer': 'fire',
-  printer: 'printer',
-  monitor: 'monitor',
-  meeting: 'mic',
-  lock: 'lock',
-  garage: 'garage',
-  irrigation: 'water',
-  vacuum: 'vacuum',
-  camera: 'camera',
-  bell: 'bell',
-};
 
 @customElement('lw-room-extras')
 export class LwRoomExtras extends LitElement {
@@ -46,12 +33,16 @@ export class LwRoomExtras extends LitElement {
     }
     .grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-auto-rows: minmax(100px, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      grid-auto-rows: minmax(110px, auto);
       align-content: start;
       gap: 8px;
       flex: 1;
       min-height: 0;
+      overflow: auto;
+    }
+    .grid::-webkit-scrollbar {
+      width: 0;
     }
     .empty {
       color: var(--text-muted);
@@ -61,45 +52,96 @@ export class LwRoomExtras extends LitElement {
     }
   `;
 
-  private _tint(kind: string): string {
-    if (kind === 'fireplace' || kind === 'towel-warmer') return 'var(--warn)';
-    if (kind === 'vacuum' || kind === 'fan') return 'var(--accent)';
-    return 'var(--amber)';
-  }
-
-  private _sub(kind: string, on: boolean, e: ReturnType<typeof entityState>): string {
-    if (!e) return on ? 'An' : 'Aus';
-    if (kind === 'fireplace') return on ? 'Brennt' : 'Aus';
-    if (kind === 'tv') return on ? ((e.attributes?.app_name as string) ?? 'An') : 'Aus';
-    if (kind === 'vacuum') {
-      const battery = e.attributes?.battery_level;
-      return battery ? `${e.state} · ${battery}%` : e.state;
+  private _renderExtra(x: ExtraConfig) {
+    if (!x.entity) return nothing;
+    switch (x.kind) {
+      case 'vacuum':
+        return html`<lw-extra-vacuum
+          .hass=${this.hass}
+          .entity=${x.entity}
+          .name=${x.name}
+        ></lw-extra-vacuum>`;
+      case 'mower':
+        return html`<lw-extra-mower
+          .hass=${this.hass}
+          .entity=${x.entity}
+          .name=${x.name}
+        ></lw-extra-mower>`;
+      case 'irrigation':
+        return html`<lw-extra-sprinkler
+          .hass=${this.hass}
+          .entity=${x.entity}
+          .name=${x.name}
+          .state_entity=${x.state_entity}
+        ></lw-extra-sprinkler>`;
+      case 'air-purifier':
+        return html`<lw-extra-fan
+          .hass=${this.hass}
+          .entity=${x.entity}
+          .name=${x.name}
+          .state_entity=${x.state_entity}
+          icon="wind"
+          tint="var(--accent)"
+        ></lw-extra-fan>`;
+      case 'dehumidifier':
+        return html`<lw-extra-fan
+          .hass=${this.hass}
+          .entity=${x.entity}
+          .name=${x.name}
+          .state_entity=${x.state_entity}
+          icon="droplet"
+          tint="var(--blue)"
+        ></lw-extra-fan>`;
+      case 'fan':
+        return html`<lw-extra-fan
+          .hass=${this.hass}
+          .entity=${x.entity}
+          .name=${x.name}
+          .state_entity=${x.state_entity}
+          icon="fan"
+          tint="var(--accent)"
+        ></lw-extra-fan>`;
+      case 'fireplace':
+        return html`<lw-extra-fan
+          .hass=${this.hass}
+          .entity=${x.entity}
+          .name=${x.name}
+          .state_entity=${x.state_entity}
+          icon="fire"
+          tint="var(--warn)"
+        ></lw-extra-fan>`;
+      case 'tv':
+        return html`<lw-extra-fan
+          .hass=${this.hass}
+          .entity=${x.entity}
+          .name=${x.name}
+          .state_entity=${x.state_entity}
+          icon="tv"
+          tint="var(--amber)"
+        ></lw-extra-fan>`;
+      default:
+        return html`<lw-extra-fan
+          .hass=${this.hass}
+          .entity=${x.entity}
+          .name=${x.name}
+          .state_entity=${x.state_entity}
+          icon="cog"
+          tint="var(--text-muted)"
+        ></lw-extra-fan>`;
     }
-    return on ? 'An' : 'Aus';
   }
 
   render() {
-    if (!this.extras.length) return nothing;
+    if (!this.extras.length) {
+      return html`<div class="card">
+        <lw-section-head sub=${this.sub} heading=${this.heading}></lw-section-head>
+        <div class="empty">Keine Geräte konfiguriert</div>
+      </div>`;
+    }
     return html`
       <div class="card">
         <lw-section-head sub=${this.sub} heading=${this.heading}></lw-section-head>
-        <div class="grid">
-          ${this.extras.map((x) => {
-            const e = entityState(this.hass, x.entity);
-            const on = e ? isOn(e.state) : false;
-            const name = x.name || friendlyName(e, x.entity?.split('.')[1] ?? '');
-            return html`
-              <lw-feature-tile
-                .icon=${EXTRA_ICON[x.kind] ?? 'cog'}
-                .name=${name}
-                .sub=${this._sub(x.kind, on, e)}
-                .on=${on}
-                .tint=${this._tint(x.kind)}
-                @click=${() => this.hass && x.entity && callToggle(this.hass, x.entity)}
-              ></lw-feature-tile>
-            `;
-          })}
-        </div>
+        <div class="grid">${this.extras.map((x) => this._renderExtra(x))}</div>
       </div>
     `;
   }

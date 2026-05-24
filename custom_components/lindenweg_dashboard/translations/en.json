@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Lindenweg Dashboard",
+        "description": "This installs the dashboard and adds it as the \"Dashboard\" panel to your HA sidebar. All other settings live inside the dashboard itself — no YAML needed."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Integration already installed."
+    }
+  }
+}

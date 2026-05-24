@@ -1,138 +1,111 @@
 # Lindenweg Dashboard
 
-Skandinavisch / Muji-inspiriertes Home Assistant **Custom Panel** — Räume, Szenen, Energie, Wetter, Sicherheit, Kameras, Kalender. Zwei Themes: **Linen** (hell) und **Walnut** (warmes Dark). Per Knopfdruck umschaltbar.
+Skandinavisch / Muji-inspiriertes Home Assistant **Custom Panel** — Räume, Szenen, Energie, Wetter, Sicherheit, Kameras, Kalender, Ereignisse, Multiroom Audio mit Radio-Tiles. Zwei Themes: **Linen** (hell) und **Walnut** (warmes Dark).
 
-> **Status: v0.1** — Overview + 1 Beispielraum funktional, weitere Räume per Config einfach ergänzbar. Visual Config-Helper im Panel (generiert YAML für `configuration.yaml`).
+> **Status: v0.2** — Custom Integration (kein YAML mehr nötig), Visual Editor direkt im Dashboard, alle Module funktional.
+
+---
+
+## Was kann es?
+
+**Übersicht**
+- Live-Energie: PV / Verbrauch / Akku / Netz · Eigenversorgungsquote
+- Wetter mit 5-Tage-Forecast
+- Sicherheits-Panel (arm/disarm, Türen, Fenster, Rauchmelder)
+- Szenen-Schnellzugriff
+- Multiroom Audio: Play/Pause, Lautstärke, Radio-Tiles, Speaker-Sync-Dropdown
+- Kameras: Hauptansicht + Selektoren, Auto-Switch bei Bewegung
+- Heute-Kalender
+- **Ereignisse**: Geräte-Fortschritt (Miele etc.), Müllabholung, schwache Akkus
+
+**Räume**
+- Konfigurierbare Szenen pro Raum (1-5 Buttons + automatischer „Aus")
+- Popup für einzelne Lichtsteuerung (mit Helligkeit)
+- Klima (Soll/Ist + Stepper)
+- Rollläden mit Vertikal-Slider und großen Hoch/Runter-Tastern
+- Mini-Mediaplayer
+- **Geräte-Bereich** mit dedizierten Tiles für:
+  - Saugroboter (Battery + Start/Dock)
+  - Mähroboter
+  - Sprinkler / Smart Irrigation
+  - Luftreiniger / Luftentfeuchter
+  - Generische Schalter, TV, Kamin, Lüfter
 
 ---
 
 ## Installation
 
-### Option A · HACS Custom Repository (empfohlen für später)
+### Über HACS (empfohlen)
 
-1. HACS → Frontend → ⋮ (oben rechts) → **Custom Repositories**
-2. Repository: `<dein-github-user>/ha-lindenweg-dashboard` · Type: **Plugin** · Hinzufügen
+1. HACS → Integrationen → ⋮ → **Custom Repositories**
+2. Repository: `latten-otto/ha-lindenweg-dashboard` · Typ: **Integration** · Hinzufügen
 3. „Lindenweg Dashboard" → Download
-4. `configuration.yaml` ergänzen (siehe unten) und HA neu starten
+4. Home Assistant **komplett neustarten** (Einstellungen → System → Neustart)
+5. Einstellungen → Geräte & Dienste → **Integration hinzufügen** → „Lindenweg Dashboard"
+6. Bestätigen — Sidebar zeigt jetzt „Dashboard"
+7. Im Dashboard das Zahnrad unten links → alles konfigurieren
 
-### Option B · Manuell (sofortiges Testen ohne Git/HACS)
+Keine YAML, kein Editieren von `configuration.yaml`.
 
-1. Datei `lindenweg-dashboard.js` aus dem Repo-Root (oder `dist/`) nehmen
-2. Per SCP / Samba nach `/config/www/community/ha-lindenweg-dashboard/` kopieren  
-   (Ordner ggf. anlegen)
-3. `configuration.yaml` ergänzen, HA neu starten
+### Migration von v0.1 (YAML-Variante)
+
+Wer schon die v0.1 mit `panel_custom:` in `configuration.yaml` installiert hatte:
+
+1. **Entferne** den `panel_custom:` Block für `lindenweg-dashboard` aus `configuration.yaml`
+2. HACS → Frontend → alte „Lindenweg Dashboard" Plugin-Variante entfernen
+3. HACS → Custom Repository neu hinzufügen (Typ jetzt: **Integration**)
+4. Schritte 4-7 oben
 
 ---
 
-## Konfiguration
+## Architektur
 
-Minimalbeispiel in `configuration.yaml`:
+```
+custom_components/lindenweg_dashboard/
+├── __init__.py         # Panel-Registration + statische Asset-Auslieferung
+├── config_flow.py      # Ein-Klick Setup via HA-UI
+├── storage.py          # JSON-Persistenz in .storage/lindenweg_dashboard.config
+├── websocket_api.py    # lindenweg/config/{get,set,subscribe}
+├── manifest.json       # HA-Integration-Metadaten
+└── frontend/
+    └── lindenweg-dashboard.js  # Lit + TypeScript Bundle (Vite gebaut)
 
-```yaml
-panel_custom:
-  - name: lindenweg-dashboard
-    sidebar_title: Lindenweg
-    sidebar_icon: mdi:home-variant
-    url_path: lindenweg
-    module_url: /hacsfiles/ha-lindenweg-dashboard/lindenweg-dashboard.js
-    # bei Option B (manuell): /local/community/ha-lindenweg-dashboard/lindenweg-dashboard.js
-    config:
-      theme: linen           # linen | walnut
-      household_name: "Haus Lindenweg"
-
-      overview:
-        weather: weather.home
-        calendar: calendar.familie
-        alarm_panel: alarm_control_panel.haus
-        presence:
-          - person.lukas
-          - person.marie
-          - person.jonas
-        scenes:
-          - scene.aufstehen
-          - scene.arbeiten
-          - scene.abendessen
-          - scene.filmabend
-          - scene.gute_nacht
-          - scene.verlassen
-        cameras:
-          - camera.eingang
-          - camera.garten
-        energy:
-          pv_now: sensor.pv_power
-          pv_today: sensor.pv_energy_today
-          consumption: sensor.home_power
-          grid_feed: sensor.grid_export_power
-          grid_draw: sensor.grid_import_power
-          battery_level: sensor.battery_soc
-          battery_flow: sensor.battery_power
-
-      rooms:
-        wohnzimmer:
-          name: Wohnzimmer
-          icon: sofa
-          climate: climate.wohnzimmer
-          media_player: media_player.sonos_arc
-          lights:
-            - light.wohnzimmer_decke
-            - light.wohnzimmer_stehlampe
-            - light.wohnzimmer_leseleuchte
-            - light.wohnzimmer_tv_backlight
-          covers:
-            - cover.wohnzimmer_sued
-            - cover.wohnzimmer_terrasse
-            - cover.wohnzimmer_ost
-          extras:
-            - kind: tv
-              name: LG OLED
-              entity: media_player.lg_tv
-            - kind: fireplace
-              name: Kamin
-              entity: switch.kamin
+src/
+├── panel/              # Custom Element Root + Sidebar + Topbar
+├── pages/              # overview-page, room-page, edit-page
+├── modules/            # ov-*: Übersicht  ·  room-*: Raum  ·  extras/: Spezialgeräte
+├── controls/           # Slider, Toggle, Stepper, Light-Tile, Gauge, Bars
+├── editor/             # Entity-Picker, Multi-Picker, Text-Input
+├── hass/               # WebSocket Config-Store + Service-Call Helpers
+├── shared/             # Section-Head, Pill, Feature-Tile
+├── styles/             # Themes (Linen/Walnut) + Base
+├── icons/              # Custom SVG Icon-Set
+└── types/              # PanelConfig, RoomConfig, …
 ```
 
-**Tipp:** Sobald das Panel läuft → Zahnrad-Symbol unten links in der Sidebar → Config-Helper öffnet sich und generiert dir den YAML-Block für weitere Räume.
-
-### Verfügbare Raum-Icons
-
-`sofa · kettle · bed · shower · desk · chair · door · tree · cog · sun · moon · fire · garage · plant`
-
-### Extra-Kinds (Geräte-Kacheln)
-
-`tv · fireplace · fan · towel-warmer · printer · monitor · meeting · vacuum · camera · bell · garage · irrigation`
-
----
+- **Backend** (Python): owns the config, serves the bundle, exposes WS API
+- **Frontend** (Lit + TypeScript): rendert das Panel, edits live via WS
+- **Persistenz**: HA `Store` auf Festplatte, ein einzelnes JSON
 
 ## Lokale Entwicklung
 
 ```bash
-git clone <dein-repo>
+git clone https://github.com/latten-otto/ha-lindenweg-dashboard.git
 cd ha-lindenweg-dashboard
 npm install
-npm run build      # baut dist/ + kopiert lindenweg-dashboard.js ins Repo-Root
+npm run build      # baut dist/ + kopiert in custom_components/.../frontend/
 npm run watch      # Auto-Rebuild bei Änderungen
-npm run typecheck  # TypeScript Check
+npm run typecheck
 ```
 
-Während der Entwicklung:
-- Build-Output (`lindenweg-dashboard.js`) per SCP nach `/config/www/community/ha-lindenweg-dashboard/` kopieren
-- HA-Browsercache leeren (Strg+Shift+R) — neue Bundle-Version wird geladen
-- Version-Banner in der Browser-Konsole zeigt, ob neu geladen
-
-## Architektur
-
-- **Lit + TypeScript**, Bundle via Vite (Single ES Module, ~35 kB gzipped)
-- Themes als CSS-Variablen, umschaltbar zur Laufzeit
-- Modulares Layout: jedes Modul (`lw-*-card`) liest seine Entities aus der Panel-Config
-- Visual Config-Helper schreibt YAML-Snippets zum Kopieren
+Während der Entwicklung: gesamten `custom_components/lindenweg_dashboard/` Ordner per Samba/SCP ins HA `/config/custom_components/` kopieren. HA neu starten, Browser-Cache leeren.
 
 ## Roadmap
 
-- v0.1 (jetzt) Overview-Page + Wohnzimmer-Template, alle Module funktional, Themes Linen/Walnut, YAML-Config-Helper
-- v0.2 Restliche Räume (Küche, Bad, Schlafzimmer, Büro, Esszimmer, Flur, Garten, Keller) mit eigenen Extras
-- v0.3 Isometrische Haus-Energiegrafik (statt Stat-Grid)
-- v0.4 Storage-Helper Integration: Config wird in HA selbst gespeichert statt YAML
-- v0.5 Mehrsprachig (EN), Touch-optimierte Layouts für Tablet-Wandhalterung
+- v0.2 (jetzt) — Integration + Visual Editor + alle v2-Anpassungen
+- v0.3 — Isometrische Haus-Energiegrafik (statt Stat-Grid)
+- v0.4 — Pre-Filled Setup: erkennt deine Areas/Devices und schlägt initiale Raum-Zuordnung vor
+- v0.5 — Mehrsprachig (EN), Touch-optimierte Layouts für Tablet-Wandhalterung
 
 ## Lizenz
 

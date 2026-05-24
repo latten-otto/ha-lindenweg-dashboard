@@ -34,15 +34,36 @@ export class LwRoomPage extends LitElement {
     .grid {
       flex: 1;
       display: grid;
-      grid-template-columns: 1fr 1.5fr;
-      grid-template-rows: minmax(0, 320px) minmax(0, 1fr);
-      gap: 12px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+      grid-auto-rows: minmax(280px, auto);
+      gap: 14px;
       min-height: 0;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .grid::-webkit-scrollbar {
+      width: 6px;
+    }
+    .grid::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
     }
     .bottom-right {
-      display: flex;
-      gap: 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px;
       min-height: 0;
+    }
+    .bottom-right > * {
+      min-width: 0;
+    }
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .bottom-right {
+        grid-template-columns: minmax(0, 1fr);
+      }
     }
     @keyframes rise {
       from {
@@ -102,8 +123,13 @@ export class LwRoomPage extends LitElement {
         <div class="grid">
           <lw-climate-card .hass=${this.hass} .entity=${room.climate}></lw-climate-card>
 
-          ${room.lights?.length
-            ? html`<lw-lights-card .hass=${this.hass} .lights=${room.lights}></lw-lights-card>`
+          ${room.lights?.length || room.scenes?.length
+            ? html`<lw-lights-card
+                .hass=${this.hass}
+                .lights=${room.lights ?? []}
+                .scenes=${room.scenes ?? []}
+                .roomName=${room.name}
+              ></lw-lights-card>`
             : html`<div></div>`}
 
           <lw-room-extras

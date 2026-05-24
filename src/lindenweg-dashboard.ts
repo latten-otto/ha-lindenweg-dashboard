@@ -1,12 +1,9 @@
-// Entry point — registers the custom panel element + visual editor.
-// Loaded by Home Assistant via panel_custom -> module_url.
+// Entry point — registers the custom panel element.
+// Loaded by the lindenweg_dashboard integration which registers the panel
+// programmatically and serves this bundle from custom_components/.../frontend/.
 import './panel/dashboard-panel';
-import './editor/dashboard-editor';
 
-// HA expects window.customPanel? No — for panel_custom, HA just imports the module
-// and looks for a custom element matching `name` from configuration.yaml.
-// We also fire a console banner so users can confirm load.
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 // eslint-disable-next-line no-console
 console.info(
   `%c LINDENWEG-DASHBOARD %c v${VERSION} `,

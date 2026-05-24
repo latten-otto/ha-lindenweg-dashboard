@@ -589,15 +589,111 @@ function e(e2, r2) {
 }
 const DEFAULT_CONFIG = {
   theme: "linen",
-  household_name: "Mein Zuhause",
+  household_name: "Zuhause",
   rooms: {},
   overview: {
     presence: [],
     scenes: [],
     cameras: [],
-    energy: {}
+    camera_motion: {},
+    energy: {},
+    events: { appliances: [], waste_calendar: void 0, low_battery_threshold: 10, battery_entities: [] },
+    radios: []
   }
 };
+class ConfigStore {
+  constructor() {
+    this._config = DEFAULT_CONFIG;
+    this._listeners = /* @__PURE__ */ new Set();
+    this._pendingSave = null;
+    this._bound = false;
+  }
+  get config() {
+    return this._config;
+  }
+  attach(hass) {
+    const withConn = hass;
+    if (this._hass === withConn) return;
+    this._hass = withConn;
+    if (this._bound) return;
+    this._bound = true;
+    this._subscribe();
+  }
+  detach() {
+    if (this._unsub) {
+      this._unsub();
+      this._unsub = void 0;
+    }
+    this._bound = false;
+  }
+  subscribe(listener) {
+    this._listeners.add(listener);
+    listener(this._config);
+    return () => {
+      this._listeners.delete(listener);
+    };
+  }
+  update(patch) {
+    const next = typeof patch === "function" ? patch(this._config) : { ...this._config, ...patch };
+    this._config = next;
+    this._emit();
+    this._scheduleSave();
+  }
+  set(config) {
+    this._config = config;
+    this._emit();
+    this._scheduleSave();
+  }
+  _emit() {
+    this._listeners.forEach((cb) => {
+      try {
+        cb(this._config);
+      } catch (e2) {
+        console.error("[lindenweg] listener threw", e2);
+      }
+    });
+  }
+  _scheduleSave() {
+    if (this._pendingSave !== null) {
+      window.clearTimeout(this._pendingSave);
+    }
+    this._pendingSave = window.setTimeout(() => {
+      this._pendingSave = null;
+      void this._flush();
+    }, 350);
+  }
+  async _flush() {
+    if (!this._hass) return;
+    try {
+      await this._hass.connection.sendMessagePromise({
+        type: "lindenweg/config/set",
+        config: this._config
+      });
+    } catch (e2) {
+      console.error("[lindenweg] config save failed", e2);
+    }
+  }
+  async _subscribe() {
+    if (!this._hass) return;
+    try {
+      this._unsub = await this._hass.connection.subscribeMessage(
+        (event) => {
+          if (!event || !event.config) return;
+          const incoming = JSON.stringify(event.config);
+          const current = JSON.stringify(this._config);
+          if (incoming !== current) {
+            this._config = event.config;
+            this._emit();
+          }
+        },
+        { type: "lindenweg/config/subscribe" }
+      );
+    } catch (e2) {
+      console.warn("[lindenweg] config subscribe failed — backend integration not installed?", e2);
+    }
+  }
+}
+const configStore = new ConfigStore();
 const themeLinen = i$3`
   :host([theme='linen']),
   .theme-linen {
@@ -845,14 +941,14 @@ const callMediaVolume = (hass, entity_id, volume) => {
 const callSceneActivate = (hass, entity_id) => {
   void hass.callService("scene", "turn_on", {}, { entity_id });
 };
-var __defProp$s = Object.defineProperty;
-var __getOwnPropDesc$s = Object.getOwnPropertyDescriptor;
-var __decorateClass$s = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$s(target, key) : target;
+var __defProp$A = Object.defineProperty;
+var __getOwnPropDesc$A = Object.getOwnPropertyDescriptor;
+var __decorateClass$A = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$A(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$s(target, key, result);
+  if (kind && result) __defProp$A(target, key, result);
   return result;
 };
 const ICONS = {
@@ -963,26 +1059,26 @@ LwIcon.styles = i$3`
       display: block;
     }
   `;
-__decorateClass$s([
+__decorateClass$A([
   n2({ type: String })
 ], LwIcon.prototype, "name", 2);
-__decorateClass$s([
+__decorateClass$A([
   n2({ type: Number })
 ], LwIcon.prototype, "size", 2);
-__decorateClass$s([
+__decorateClass$A([
   n2({ type: Number })
 ], LwIcon.prototype, "stroke", 2);
-LwIcon = __decorateClass$s([
+LwIcon = __decorateClass$A([
   t("lw-icon")
 ], LwIcon);
-var __defProp$r = Object.defineProperty;
-var __getOwnPropDesc$r = Object.getOwnPropertyDescriptor;
-var __decorateClass$r = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$r(target, key) : target;
+var __defProp$z = Object.defineProperty;
+var __getOwnPropDesc$z = Object.getOwnPropertyDescriptor;
+var __decorateClass$z = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$z(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$r(target, key, result);
+  if (kind && result) __defProp$z(target, key, result);
   return result;
 };
 let LwSidebar = class extends i {
@@ -1238,26 +1334,26 @@ LwSidebar.styles = i$3`
       background: var(--card);
     }
   `;
-__decorateClass$r([
+__decorateClass$z([
   n2({ attribute: false })
 ], LwSidebar.prototype, "hass", 2);
-__decorateClass$r([
+__decorateClass$z([
   n2({ attribute: false })
 ], LwSidebar.prototype, "config", 2);
-__decorateClass$r([
+__decorateClass$z([
   n2({ type: String })
 ], LwSidebar.prototype, "page", 2);
-LwSidebar = __decorateClass$r([
+LwSidebar = __decorateClass$z([
   t("lw-sidebar")
 ], LwSidebar);
-var __defProp$q = Object.defineProperty;
-var __getOwnPropDesc$q = Object.getOwnPropertyDescriptor;
-var __decorateClass$q = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$q(target, key) : target;
+var __defProp$y = Object.defineProperty;
+var __getOwnPropDesc$y = Object.getOwnPropertyDescriptor;
+var __decorateClass$y = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$y(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$q(target, key, result);
+  if (kind && result) __defProp$y(target, key, result);
   return result;
 };
 let LwTopbar = class extends i {
@@ -1435,32 +1531,32 @@ LwTopbar.styles = i$3`
       background: var(--text-faint);
     }
   `;
-__decorateClass$q([
+__decorateClass$y([
   n2({ attribute: false })
 ], LwTopbar.prototype, "hass", 2);
-__decorateClass$q([
+__decorateClass$y([
   n2({ attribute: false })
 ], LwTopbar.prototype, "config", 2);
-__decorateClass$q([
+__decorateClass$y([
   n2({ type: String })
 ], LwTopbar.prototype, "heading", 2);
-__decorateClass$q([
+__decorateClass$y([
   n2({ type: String })
 ], LwTopbar.prototype, "subtitle", 2);
-__decorateClass$q([
+__decorateClass$y([
   n2({ attribute: false })
 ], LwTopbar.prototype, "time", 2);
-LwTopbar = __decorateClass$q([
+LwTopbar = __decorateClass$y([
   t("lw-topbar")
 ], LwTopbar);
-var __defProp$p = Object.defineProperty;
-var __getOwnPropDesc$p = Object.getOwnPropertyDescriptor;
-var __decorateClass$p = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$p(target, key) : target;
+var __defProp$x = Object.defineProperty;
+var __getOwnPropDesc$x = Object.getOwnPropertyDescriptor;
+var __decorateClass$x = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$x(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$p(target, key, result);
+  if (kind && result) __defProp$x(target, key, result);
   return result;
 };
 let LwSectionHead = class extends i {
@@ -1508,23 +1604,23 @@ LwSectionHead.styles = i$3`
       flex-shrink: 0;
     }
   `;
-__decorateClass$p([
+__decorateClass$x([
   n2({ type: String })
 ], LwSectionHead.prototype, "sub", 2);
-__decorateClass$p([
+__decorateClass$x([
   n2({ type: String })
 ], LwSectionHead.prototype, "heading", 2);
-LwSectionHead = __decorateClass$p([
+LwSectionHead = __decorateClass$x([
   t("lw-section-head")
 ], LwSectionHead);
-var __defProp$o = Object.defineProperty;
-var __getOwnPropDesc$o = Object.getOwnPropertyDescriptor;
-var __decorateClass$o = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$o(target, key) : target;
+var __defProp$w = Object.defineProperty;
+var __getOwnPropDesc$w = Object.getOwnPropertyDescriptor;
+var __decorateClass$w = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$w(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$o(target, key, result);
+  if (kind && result) __defProp$w(target, key, result);
   return result;
 };
 const ICON_MAP = {
@@ -1729,23 +1825,23 @@ LwWeatherCard.styles = i$3`
       text-align: center;
     }
   `;
-__decorateClass$o([
+__decorateClass$w([
   n2({ attribute: false })
 ], LwWeatherCard.prototype, "hass", 2);
-__decorateClass$o([
+__decorateClass$w([
   n2({ type: String })
 ], LwWeatherCard.prototype, "entity", 2);
-LwWeatherCard = __decorateClass$o([
+LwWeatherCard = __decorateClass$w([
   t("lw-weather-card")
 ], LwWeatherCard);
-var __defProp$n = Object.defineProperty;
-var __getOwnPropDesc$n = Object.getOwnPropertyDescriptor;
-var __decorateClass$n = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$n(target, key) : target;
+var __defProp$v = Object.defineProperty;
+var __getOwnPropDesc$v = Object.getOwnPropertyDescriptor;
+var __decorateClass$v = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$v(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$n(target, key, result);
+  if (kind && result) __defProp$v(target, key, result);
   return result;
 };
 let LwPill = class extends i {
@@ -1772,23 +1868,23 @@ LwPill.styles = i$3`
       line-height: 1.2;
     }
   `;
-__decorateClass$n([
+__decorateClass$v([
   n2({ type: String })
 ], LwPill.prototype, "color", 2);
-__decorateClass$n([
+__decorateClass$v([
   n2({ type: Boolean })
 ], LwPill.prototype, "soft", 2);
-LwPill = __decorateClass$n([
+LwPill = __decorateClass$v([
   t("lw-pill")
 ], LwPill);
-var __defProp$m = Object.defineProperty;
-var __getOwnPropDesc$m = Object.getOwnPropertyDescriptor;
-var __decorateClass$m = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$m(target, key) : target;
+var __defProp$u = Object.defineProperty;
+var __getOwnPropDesc$u = Object.getOwnPropertyDescriptor;
+var __decorateClass$u = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$u(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$m(target, key, result);
+  if (kind && result) __defProp$u(target, key, result);
   return result;
 };
 let LwDualBars = class extends i {
@@ -1855,26 +1951,26 @@ LwDualBars.styles = i$3`
       right: 40%;
     }
   `;
-__decorateClass$m([
+__decorateClass$u([
   n2({ type: Array })
 ], LwDualBars.prototype, "pv", 2);
-__decorateClass$m([
+__decorateClass$u([
   n2({ type: Array })
 ], LwDualBars.prototype, "use", 2);
-__decorateClass$m([
+__decorateClass$u([
   n2({ type: Number })
 ], LwDualBars.prototype, "height", 2);
-LwDualBars = __decorateClass$m([
+LwDualBars = __decorateClass$u([
   t("lw-dual-bars")
 ], LwDualBars);
-var __defProp$l = Object.defineProperty;
-var __getOwnPropDesc$l = Object.getOwnPropertyDescriptor;
-var __decorateClass$l = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$l(target, key) : target;
+var __defProp$t = Object.defineProperty;
+var __getOwnPropDesc$t = Object.getOwnPropertyDescriptor;
+var __decorateClass$t = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$t(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$l(target, key, result);
+  if (kind && result) __defProp$t(target, key, result);
   return result;
 };
 let LwEnergyCard = class extends i {
@@ -2090,23 +2186,23 @@ LwEnergyCard.styles = i$3`
       padding: 40px 0;
     }
   `;
-__decorateClass$l([
+__decorateClass$t([
   n2({ attribute: false })
 ], LwEnergyCard.prototype, "hass", 2);
-__decorateClass$l([
+__decorateClass$t([
   n2({ attribute: false })
 ], LwEnergyCard.prototype, "energy", 2);
-LwEnergyCard = __decorateClass$l([
+LwEnergyCard = __decorateClass$t([
   t("lw-energy-card")
 ], LwEnergyCard);
-var __defProp$k = Object.defineProperty;
-var __getOwnPropDesc$k = Object.getOwnPropertyDescriptor;
-var __decorateClass$k = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$k(target, key) : target;
+var __defProp$s = Object.defineProperty;
+var __getOwnPropDesc$s = Object.getOwnPropertyDescriptor;
+var __decorateClass$s = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$s(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$k(target, key, result);
+  if (kind && result) __defProp$s(target, key, result);
   return result;
 };
 let LwSecurityCard = class extends i {
@@ -2286,23 +2382,23 @@ LwSecurityCard.styles = i$3`
       color: var(--text-muted);
     }
   `;
-__decorateClass$k([
+__decorateClass$s([
   n2({ attribute: false })
 ], LwSecurityCard.prototype, "hass", 2);
-__decorateClass$k([
+__decorateClass$s([
   n2({ type: String })
 ], LwSecurityCard.prototype, "alarm", 2);
-LwSecurityCard = __decorateClass$k([
+LwSecurityCard = __decorateClass$s([
   t("lw-security-card")
 ], LwSecurityCard);
-var __defProp$j = Object.defineProperty;
-var __getOwnPropDesc$j = Object.getOwnPropertyDescriptor;
-var __decorateClass$j = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$j(target, key) : target;
+var __defProp$r = Object.defineProperty;
+var __getOwnPropDesc$r = Object.getOwnPropertyDescriptor;
+var __decorateClass$r = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$r(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$j(target, key, result);
+  if (kind && result) __defProp$r(target, key, result);
   return result;
 };
 const DEFAULT_SCENE_ICON = {
@@ -2430,26 +2526,26 @@ LwScenesRow.styles = i$3`
       text-align: center;
     }
   `;
-__decorateClass$j([
+__decorateClass$r([
   n2({ attribute: false })
 ], LwScenesRow.prototype, "hass", 2);
-__decorateClass$j([
+__decorateClass$r([
   n2({ type: Array })
 ], LwScenesRow.prototype, "scenes", 2);
-__decorateClass$j([
+__decorateClass$r([
   r()
 ], LwScenesRow.prototype, "_firing", 2);
-LwScenesRow = __decorateClass$j([
+LwScenesRow = __decorateClass$r([
   t("lw-scenes-row")
 ], LwScenesRow);
-var __defProp$i = Object.defineProperty;
-var __getOwnPropDesc$i = Object.getOwnPropertyDescriptor;
-var __decorateClass$i = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$i(target, key) : target;
+var __defProp$q = Object.defineProperty;
+var __getOwnPropDesc$q = Object.getOwnPropertyDescriptor;
+var __decorateClass$q = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$q(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$i(target, key, result);
+  if (kind && result) __defProp$q(target, key, result);
   return result;
 };
 let LwSlider = class extends i {
@@ -2548,124 +2644,211 @@ LwSlider.styles = i$3`
       box-shadow: var(--shadow-sm);
     }
   `;
-__decorateClass$i([
+__decorateClass$q([
   n2({ type: Number })
 ], LwSlider.prototype, "value", 2);
-__decorateClass$i([
+__decorateClass$q([
   n2({ type: Number })
 ], LwSlider.prototype, "min", 2);
-__decorateClass$i([
+__decorateClass$q([
   n2({ type: Number })
 ], LwSlider.prototype, "max", 2);
-__decorateClass$i([
+__decorateClass$q([
   n2({ type: Number })
 ], LwSlider.prototype, "height", 2);
-__decorateClass$i([
+__decorateClass$q([
   n2({ type: String })
 ], LwSlider.prototype, "accent", 2);
-__decorateClass$i([
+__decorateClass$q([
   n2({ type: Boolean })
 ], LwSlider.prototype, "knob", 2);
-__decorateClass$i([
+__decorateClass$q([
   e(".s")
 ], LwSlider.prototype, "_track", 2);
-LwSlider = __decorateClass$i([
+LwSlider = __decorateClass$q([
   t("lw-slider")
 ], LwSlider);
-var __defProp$h = Object.defineProperty;
-var __getOwnPropDesc$h = Object.getOwnPropertyDescriptor;
-var __decorateClass$h = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$h(target, key) : target;
+var __defProp$p = Object.defineProperty;
+var __getOwnPropDesc$p = Object.getOwnPropertyDescriptor;
+var __decorateClass$p = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$p(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$h(target, key, result);
+  if (kind && result) __defProp$p(target, key, result);
   return result;
 };
 let LwMediaCard = class extends i {
-  _allRoomPlayers() {
-    const rooms = this.config.rooms ?? {};
-    const result = [];
-    Object.entries(rooms).forEach(([k2, r2]) => {
-      if (r2.media_player) result.push({ roomKey: k2, entityId: r2.media_player, name: r2.name });
+  constructor() {
+    super(...arguments);
+    this._selected = null;
+    this._syncOpen = false;
+  }
+  _allPlayers() {
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    const rooms = this.config?.rooms ?? {};
+    Object.values(rooms).forEach((r2) => {
+      if (r2.media_player && !seen.has(r2.media_player)) {
+        seen.add(r2.media_player);
+        out.push({ id: r2.media_player, name: r2.name });
+      }
     });
-    return result;
+    return out;
+  }
+  _activePlayer() {
+    const players = this._allPlayers();
+    if (this._selected && players.find((p2) => p2.id === this._selected)) return this._selected;
+    const playing = players.find((p2) => entityState(this.hass, p2.id)?.state === "playing");
+    return playing?.id ?? players[0]?.id ?? "";
+  }
+  _joinedMembers(id) {
+    const e2 = entityState(this.hass, id);
+    return e2?.attributes?.group_members ?? [];
+  }
+  _isJoined(master, member) {
+    if (master === member) return true;
+    return this._joinedMembers(master).includes(member);
+  }
+  _toggleJoin(master, member) {
+    if (!this.hass || master === member) return;
+    const joined = this._isJoined(master, member);
+    if (joined) {
+      void this.hass.callService("media_player", "unjoin", {}, { entity_id: member });
+    } else {
+      void this.hass.callService(
+        "media_player",
+        "join",
+        { group_members: [member] },
+        { entity_id: master }
+      );
+    }
+  }
+  _playRadio(player, r2) {
+    if (!this.hass) return;
+    void this.hass.callService(
+      "media_player",
+      "play_media",
+      {
+        media_content_id: r2.url,
+        media_content_type: r2.content_type ?? "music"
+      },
+      { entity_id: player }
+    );
+  }
+  _isPlayingRadio(player, r2) {
+    const e2 = entityState(this.hass, player);
+    if (!e2 || e2.state !== "playing") return false;
+    const src = e2.attributes.media_content_id ?? "";
+    return src === r2.url;
   }
   render() {
-    const players = this._allRoomPlayers();
+    const players = this._allPlayers();
     if (!players.length) {
       return b`<div class="card">
-        <lw-section-head sub="Wird abgespielt" heading="Multiroom Audio"></lw-section-head>
+        <lw-section-head sub="Audio" heading="Multiroom"></lw-section-head>
         <div class="empty">Kein Media-Player konfiguriert</div>
       </div>`;
     }
-    const playing = players.find((p2) => entityState(this.hass, p2.entityId)?.state === "playing") ?? players[0];
-    const e2 = entityState(this.hass, playing.entityId);
-    const playingState = e2?.state === "playing";
+    const playerId = this._activePlayer();
+    const e2 = entityState(this.hass, playerId);
+    const playing = e2?.state === "playing";
     const title = e2?.attributes?.media_title ?? "–";
-    const artist = e2?.attributes?.media_artist ?? e2?.attributes?.app_name ?? "";
-    const source = e2?.attributes?.source ?? "";
-    const device = friendlyName(e2, playing.entityId.split(".")[1]);
+    const artist = e2?.attributes?.media_artist ?? e2?.attributes?.app_name ?? e2?.attributes?.source ?? "";
     const vol = Math.round((e2?.attributes?.volume_level ?? 0) * 100);
     const art = e2?.attributes?.entity_picture ?? "";
+    const radios = this.config.overview?.radios ?? [];
+    const joinedCount = this._joinedMembers(playerId).length;
     return b`
       <div class="card">
-        <lw-section-head sub="Wird abgespielt" heading="Multiroom Audio"></lw-section-head>
-
-        <div class="row">
-          <div
-            class="art"
-            style=${art ? `background-image:url(${art})` : ""}
+        <lw-section-head sub="Multiroom" heading="Audio">
+          <select
+            slot="right"
+            class="picker"
+            style="max-width:140px"
+            .value=${playerId}
+            @change=${(ev) => this._selected = ev.target.value}
           >
-            ${!art ? b`<div class="gloss"></div><lw-icon class="music" name="music" .size=${28}></lw-icon>` : ""}
+            ${players.map(
+      (p2) => b`<option value=${p2.id} ?selected=${p2.id === playerId}>${p2.name}</option>`
+    )}
+          </select>
+        </lw-section-head>
+
+        <div class="now">
+          <div class=${"art " + (playing ? "playing" : "")} style=${art ? `background-image:url(${art})` : ""}>
+            ${!art ? b`<lw-icon name="music" .size=${22}></lw-icon>` : A}
           </div>
           <div class="info">
             <div class="title">${title}</div>
             <div class="artist">${artist}</div>
-            <div class="src">${[source, device].filter(Boolean).join(" · ")}</div>
           </div>
-        </div>
-
-        <div class="transport">
-          <button class="mbtn" @click=${() => this.hass && this.hass.callService("media_player", "media_previous_track", {}, { entity_id: playing.entityId })}>
-            <lw-icon name="skip-prev" .size=${18}></lw-icon>
-          </button>
-          <button
-            class="mbtn primary"
-            @click=${() => this.hass && callMediaPlay(this.hass, playing.entityId, !playingState)}
-          >
-            <lw-icon name=${playingState ? "pause" : "play"} .size=${20}></lw-icon>
-          </button>
-          <button class="mbtn" @click=${() => this.hass && this.hass.callService("media_player", "media_next_track", {}, { entity_id: playing.entityId })}>
-            <lw-icon name="skip-next" .size=${18}></lw-icon>
+          <button class="play" @click=${() => this.hass && callMediaPlay(this.hass, playerId, !playing)}>
+            <lw-icon name=${playing ? "pause" : "play"} .size=${20}></lw-icon>
           </button>
         </div>
 
         <div class="vol">
-          <lw-icon name="volume" .size=${14} style="color:var(--text-muted)"></lw-icon>
+          <lw-icon name="volume" .size=${13} style="color:var(--text-muted)"></lw-icon>
           <lw-slider
             .value=${vol}
-            @change=${(ev) => this.hass && callMediaVolume(this.hass, playing.entityId, ev.detail.value)}
+            @change=${(ev) => this.hass && callMediaVolume(this.hass, playerId, ev.detail.value)}
           ></lw-slider>
-          <span class="vol-num">${vol}</span>
+          <span class="num">${vol}</span>
         </div>
 
         ${players.length > 1 ? b`
               <div class="speakers">
-                ${players.map((p2) => {
-      const ps = entityState(this.hass, p2.entityId);
-      const on = ps?.state === "playing";
+                <button
+                  class=${"sync-btn" + (this._syncOpen ? " active" : "")}
+                  @click=${() => this._syncOpen = !this._syncOpen}
+                >
+                  <lw-icon name="sound" .size=${13}></lw-icon>
+                  Sync ${joinedCount > 0 ? `· ${joinedCount + 1}` : ""}
+                </button>
+              </div>
+              ${this._syncOpen ? b`
+                    <div class="sync-panel">
+                      ${players.map((p2) => {
+      const joined = this._isJoined(playerId, p2.id);
+      const isMaster = p2.id === playerId;
+      const st = entityState(this.hass, p2.id)?.state ?? "unknown";
       return b`
-                    <button
-                      class=${"sp " + (on ? "on" : "")}
-                      @click=${() => this.hass && callMediaPlay(this.hass, p2.entityId, !on)}
+                          <div
+                            class="sync-row"
+                            @click=${() => !isMaster && this._toggleJoin(playerId, p2.id)}
+                          >
+                            <div class=${"check" + (joined ? " on" : "")}>
+                              ${joined ? b`<lw-icon name="check" .size=${11} .stroke=${2.5}></lw-icon>` : A}
+                            </div>
+                            <div class="row-name">${p2.name}${isMaster ? " (Master)" : ""}</div>
+                            <div class="row-state">${st}</div>
+                          </div>
+                        `;
+    })}
+                    </div>
+                  ` : A}
+            ` : A}
+
+        ${radios.length > 0 ? b`
+              <div class="radios-head">Radio-Sender</div>
+              <div class="radio-grid">
+                ${radios.map((r2) => {
+      const active = this._isPlayingRadio(playerId, r2);
+      return b`
+                    <div
+                      class=${"radio" + (active ? " playing" : "")}
+                      style=${r2.logo ? `background-image:url(${r2.logo})` : ""}
+                      title=${r2.name}
+                      @click=${() => this._playRadio(playerId, r2)}
                     >
-                      <span class="d"></span>${p2.name.split(" ")[0]}
-                    </button>
+                      ${!r2.logo ? b`<div class="logo"><lw-icon name="music" .size=${18}></lw-icon></div>` : A}
+                      ${!r2.logo ? b`<div class="nm">${r2.name}</div>` : A}
+                    </div>
                   `;
     })}
               </div>
-            ` : ""}
+            ` : b`<div class="empty">Keine Radio-Sender konfiguriert</div>`}
       </div>
     `;
   }
@@ -2686,48 +2869,33 @@ LwMediaCard.styles = i$3`
       height: 100%;
       min-width: 0;
     }
-    .row {
+    .now {
       display: flex;
       gap: 12px;
       align-items: center;
     }
     .art {
-      width: 84px;
-      height: 84px;
-      border-radius: 12px;
-      background: linear-gradient(
-        135deg,
-        var(--warn) 0%,
-        var(--amber) 50%,
-        var(--accent) 100%
-      );
+      width: 56px;
+      height: 56px;
+      border-radius: 11px;
       flex-shrink: 0;
+      background: var(--card-inset) center/cover no-repeat;
+      color: var(--text-muted);
       position: relative;
       overflow: hidden;
-      background-size: cover;
-      background-position: center;
+      display: grid;
+      place-items: center;
     }
-    .art .gloss {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(
-        circle at 30% 30%,
-        rgba(255, 255, 255, 0.25),
-        transparent 50%
-      );
-    }
-    .art .music {
-      position: absolute;
-      bottom: 8px;
-      right: 8px;
-      color: rgba(0, 0, 0, 0.35);
+    .art.playing {
+      background-image: linear-gradient(135deg, var(--warn), var(--amber));
+      color: white;
     }
     .info {
       flex: 1;
       min-width: 0;
     }
     .title {
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 500;
       letter-spacing: -0.01em;
       overflow: hidden;
@@ -2735,118 +2903,273 @@ LwMediaCard.styles = i$3`
       white-space: nowrap;
     }
     .artist {
-      font-size: 12px;
+      font-size: 11.5px;
       color: var(--text-muted);
       margin-top: 2px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .src {
-      font-size: 10.5px;
-      color: var(--text-faint);
-      margin-top: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-weight: 500;
-    }
-    .transport {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      justify-content: center;
-    }
-    .mbtn {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--text);
-      display: grid;
-      place-items: center;
-    }
-    .mbtn.primary {
+    .play {
       width: 44px;
       height: 44px;
+      border-radius: 50%;
       background: var(--text);
       color: var(--bg);
-      border-color: var(--text);
+      border: 1px solid var(--text);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .play:hover {
+      transform: scale(1.04);
     }
     .vol {
       display: flex;
       align-items: center;
       gap: 10px;
     }
-    .speakers {
-      display: flex;
-      gap: 4px;
-      flex-wrap: wrap;
-      padding-top: 8px;
-      border-top: 1px solid var(--border-soft);
-    }
-    .sp {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 5px 9px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text-muted);
-      font-size: 11px;
-      font-weight: 500;
-    }
-    .sp.on {
-      border-color: var(--accent);
-      background: color-mix(in oklab, var(--accent) 14%, transparent);
-      color: var(--accent);
-    }
-    .sp .d {
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      background: var(--text-faint);
-    }
-    .sp.on .d {
-      background: var(--accent);
-    }
-    .vol-num {
+    .vol .num {
       font-family: 'Geist Mono', monospace;
       font-size: 11px;
       color: var(--text-muted);
-      width: 24px;
+      width: 26px;
+      text-align: right;
+    }
+    .speakers {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .picker {
+      flex: 1;
+      padding: 7px 10px;
+      border-radius: 9px;
+      background: var(--card-inset);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font: inherit;
+      font-size: 12px;
+    }
+    .sync-btn {
+      padding: 7px 12px;
+      border-radius: 9px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .sync-btn:hover {
+      background: var(--card-inset);
+    }
+    .sync-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    .sync-panel {
+      background: var(--card-inset);
+      border-radius: 11px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 160px;
+      overflow: auto;
+    }
+    .sync-panel::-webkit-scrollbar {
+      width: 0;
+    }
+    .sync-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 6px 8px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .sync-row:hover {
+      background: var(--card);
+    }
+    .check {
+      width: 16px;
+      height: 16px;
+      border-radius: 5px;
+      border: 1.5px solid var(--border);
+      display: grid;
+      place-items: center;
+      color: white;
+      flex-shrink: 0;
+    }
+    .check.on {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .row-name {
+      flex: 1;
+      font-size: 12px;
+    }
+    .row-state {
+      font-size: 10px;
+      color: var(--text-faint);
+      font-family: 'Geist Mono', monospace;
+    }
+    .radios-head {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .radio-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+      gap: 8px;
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding-bottom: 2px;
+    }
+    .radio-grid::-webkit-scrollbar {
+      width: 0;
+    }
+    .radio {
+      aspect-ratio: 1;
+      border-radius: 12px;
+      background: var(--card-inset);
+      border: 1px solid var(--border-soft);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s;
+      background-size: cover;
+      background-position: center;
+      color: var(--text);
+    }
+    .radio:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+    .radio .logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--text-muted);
+      display: grid;
+      place-items: center;
+    }
+    .radio .nm {
+      font-size: 11.5px;
+      font-weight: 500;
+      line-height: 1.2;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .radio.playing {
+      background: color-mix(in oklab, var(--accent) 22%, var(--card-inset));
+      border-color: var(--accent);
     }
     .empty {
       color: var(--text-muted);
       font-size: 12px;
-      padding: 40px 0;
+      padding: 24px 0;
       text-align: center;
     }
   `;
-__decorateClass$h([
+__decorateClass$p([
   n2({ attribute: false })
 ], LwMediaCard.prototype, "hass", 2);
-__decorateClass$h([
+__decorateClass$p([
   n2({ attribute: false })
 ], LwMediaCard.prototype, "config", 2);
-LwMediaCard = __decorateClass$h([
+__decorateClass$p([
+  r()
+], LwMediaCard.prototype, "_selected", 2);
+__decorateClass$p([
+  r()
+], LwMediaCard.prototype, "_syncOpen", 2);
+LwMediaCard = __decorateClass$p([
   t("lw-media-card")
 ], LwMediaCard);
-var __defProp$g = Object.defineProperty;
-var __getOwnPropDesc$g = Object.getOwnPropertyDescriptor;
-var __decorateClass$g = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$g(target, key) : target;
+var __defProp$o = Object.defineProperty;
+var __getOwnPropDesc$o = Object.getOwnPropertyDescriptor;
+var __decorateClass$o = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$o(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$g(target, key, result);
+  if (kind && result) __defProp$o(target, key, result);
   return result;
 };
 let LwCamerasCard = class extends i {
   constructor() {
     super(...arguments);
     this.cameras = [];
+    this.cameraMotion = {};
+    this._selected = null;
+    this._manual = false;
+    this._motionLastChanged = {};
+    this._resetAuto = () => {
+      this._manual = false;
+    };
+  }
+  updated() {
+    if (!this.hass) return;
+    let latestCam = null;
+    let latestTs = 0;
+    Object.entries(this.cameraMotion).forEach(([cam, sensor]) => {
+      const e2 = entityState(this.hass, sensor);
+      if (!e2) return;
+      const ts = Date.parse(e2.last_changed);
+      if (isOn(e2.state)) {
+        this._motionLastChanged[cam] = ts + 1e10;
+      } else {
+        this._motionLastChanged[cam] = ts;
+      }
+      if ((this._motionLastChanged[cam] ?? 0) > latestTs) {
+        latestTs = this._motionLastChanged[cam];
+        latestCam = cam;
+      }
+    });
+    if (this._selected === null && this.cameras.length) {
+      this._selected = latestCam ?? this.cameras[0];
+    }
+    if (!this._manual && latestCam && this._selected !== latestCam) {
+      this._selected = latestCam;
+    }
+    if (this._selected && !this.cameras.includes(this._selected)) {
+      this._selected = this.cameras[0] ?? null;
+    }
+  }
+  _pick(cam) {
+    this._manual = true;
+    this._selected = cam;
+  }
+  _hasMotion(cam) {
+    const sensor = this.cameraMotion?.[cam];
+    if (!sensor) return false;
+    const e2 = entityState(this.hass, sensor);
+    return e2 ? isOn(e2.state) : false;
+  }
+  _imgFor(cam) {
+    const e2 = entityState(this.hass, cam);
+    return e2?.attributes?.entity_picture;
   }
   render() {
     if (!this.cameras.length) {
@@ -2855,26 +3178,42 @@ let LwCamerasCard = class extends i {
         <div class="empty">Keine Kameras konfiguriert</div>
       </div>`;
     }
+    const cam = this._selected ?? this.cameras[0];
+    const e2 = entityState(this.hass, cam);
+    const online = e2 && e2.state !== "unavailable" && e2.state !== "unknown";
+    const img = this._imgFor(cam);
+    const name = friendlyName(e2, cam.split(".")[1]);
+    const motionOnHere = this._hasMotion(cam);
     return b`
       <div class="card">
-        <lw-section-head sub=${"Live · " + this.cameras.length + " Kameras"} heading="Kameras"></lw-section-head>
-        <div class="grid">
-          ${this.cameras.map((id) => {
-      const e2 = entityState(this.hass, id);
-      const name = friendlyName(e2, id.split(".")[1]);
-      const online = e2 && e2.state !== "unavailable" && e2.state !== "unknown";
-      const img = e2?.attributes?.entity_picture;
+        <lw-section-head sub=${`Live · ${this.cameras.length} Kameras`} heading="Kameras">
+          ${this._manual ? b`<button slot="right" class="auto-tag" @click=${this._resetAuto}>
+                Auto
+              </button>` : A}
+        </lw-section-head>
+
+        <div class="main" style=${img ? `background-image:url(${img})` : ""}>
+          <div class="vignette"></div>
+          <div class="badge">
+            <span class="live"></span>${online ? motionOnHere ? "MOTION" : "LIVE" : "OFFLINE"}
+          </div>
+          <div class="name">${name}</div>
+        </div>
+
+        <div class="selector">
+          ${this.cameras.map((c2) => {
+      const ce = entityState(this.hass, c2);
+      const nm = friendlyName(ce, c2.split(".")[1]);
+      const motion = this._hasMotion(c2);
+      const active = c2 === cam;
       return b`
-              <div
-                class="tile"
-                style=${img ? `background-image:url(${img})` : ""}
+              <button
+                class=${"pick" + (active ? " active" : "") + (motion ? " motion" : "")}
+                @click=${() => this._pick(c2)}
+                title=${nm}
               >
-                <div class="vignette"></div>
-                <div class="badge">
-                  <span class="live"></span>${online ? "LIVE" : "OFFLINE"}
-                </div>
-                <div class="name">${name}</div>
-              </div>
+                <span class="dot"></span>${nm.length > 18 ? nm.slice(0, 16) + "…" : nm}
+              </button>
             `;
     })}
         </div>
@@ -2895,61 +3234,111 @@ LwCamerasCard.styles = i$3`
       display: flex;
       flex-direction: column;
       height: 100%;
+      gap: 12px;
+      min-width: 0;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
+    .main {
       flex: 1;
       min-height: 0;
-    }
-    .tile {
-      border-radius: 11px;
+      border-radius: 14px;
       overflow: hidden;
       position: relative;
-      aspect-ratio: 4/3;
       background: linear-gradient(160deg, #1a2a32 0%, #2a3a3a 60%, #3a4a3a 100%);
       border: 1px solid var(--border-soft);
       background-size: cover;
       background-position: center;
     }
-    .tile .vignette {
+    .vignette {
       position: absolute;
       left: 0;
       right: 0;
       bottom: 0;
       height: 40%;
-      background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.5));
+      background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.55));
+      pointer-events: none;
     }
     .badge {
       position: absolute;
-      top: 6px;
-      left: 6px;
+      top: 10px;
+      left: 10px;
       display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 2px 7px;
+      gap: 5px;
+      padding: 3px 8px;
       border-radius: 6px;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.55);
       backdrop-filter: blur(4px);
       color: white;
-      font-size: 9.5px;
+      font-size: 10px;
       font-weight: 500;
+      letter-spacing: 0.05em;
     }
     .badge .live {
-      width: 5px;
-      height: 5px;
+      width: 6px;
+      height: 6px;
       border-radius: 999px;
       background: #e76f51;
     }
     .name {
       position: absolute;
-      bottom: 6px;
-      left: 6px;
+      bottom: 10px;
+      left: 12px;
       color: white;
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 500;
-      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+    }
+    .selector {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .selector::-webkit-scrollbar {
+      height: 0;
+    }
+    .pick {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 10px;
+      background: var(--card-inset);
+      border: 1px solid var(--border-soft);
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.12s;
+    }
+    .pick.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+    .pick .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--text-faint);
+    }
+    .pick.active .dot {
+      background: var(--accent);
+    }
+    .pick.motion .dot {
+      background: #e76f51;
+      animation: pulse-soft 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-soft {
+      0%,
+      100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.4;
+      }
     }
     .empty {
       color: var(--text-muted);
@@ -2957,24 +3346,38 @@ LwCamerasCard.styles = i$3`
       padding: 40px 0;
       text-align: center;
     }
+    .auto-tag {
+      font-size: 10px;
+      color: var(--text-faint);
+      font-family: 'Geist Mono', monospace;
+    }
   `;
-__decorateClass$g([
+__decorateClass$o([
   n2({ attribute: false })
 ], LwCamerasCard.prototype, "hass", 2);
-__decorateClass$g([
+__decorateClass$o([
   n2({ type: Array })
 ], LwCamerasCard.prototype, "cameras", 2);
-LwCamerasCard = __decorateClass$g([
+__decorateClass$o([
+  n2({ attribute: false })
+], LwCamerasCard.prototype, "cameraMotion", 2);
+__decorateClass$o([
+  r()
+], LwCamerasCard.prototype, "_selected", 2);
+__decorateClass$o([
+  r()
+], LwCamerasCard.prototype, "_manual", 2);
+LwCamerasCard = __decorateClass$o([
   t("lw-cameras-card")
 ], LwCamerasCard);
-var __defProp$f = Object.defineProperty;
-var __getOwnPropDesc$f = Object.getOwnPropertyDescriptor;
-var __decorateClass$f = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$f(target, key) : target;
+var __defProp$n = Object.defineProperty;
+var __getOwnPropDesc$n = Object.getOwnPropertyDescriptor;
+var __decorateClass$n = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$n(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$f(target, key, result);
+  if (kind && result) __defProp$n(target, key, result);
   return result;
 };
 let LwCalendarCard = class extends i {
@@ -3127,29 +3530,354 @@ LwCalendarCard.styles = i$3`
       color: var(--text-muted);
     }
   `;
-__decorateClass$f([
+__decorateClass$n([
   n2({ attribute: false })
 ], LwCalendarCard.prototype, "hass", 2);
-__decorateClass$f([
+__decorateClass$n([
   n2({ type: String })
 ], LwCalendarCard.prototype, "entity", 2);
-__decorateClass$f([
+__decorateClass$n([
   r()
 ], LwCalendarCard.prototype, "_events", 2);
-__decorateClass$f([
+__decorateClass$n([
   r()
 ], LwCalendarCard.prototype, "_loaded", 2);
-LwCalendarCard = __decorateClass$f([
+LwCalendarCard = __decorateClass$n([
   t("lw-calendar-card")
 ], LwCalendarCard);
-var __defProp$e = Object.defineProperty;
-var __getOwnPropDesc$e = Object.getOwnPropertyDescriptor;
-var __decorateClass$e = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$e(target, key) : target;
+var __defProp$m = Object.defineProperty;
+var __getOwnPropDesc$m = Object.getOwnPropertyDescriptor;
+var __decorateClass$m = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$m(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$e(target, key, result);
+  if (kind && result) __defProp$m(target, key, result);
+  return result;
+};
+const APPLIANCE_ICON = {
+  dishwasher: "water",
+  washer: "washer",
+  washing_machine: "washer",
+  dryer: "fan",
+  oven: "oven",
+  fridge: "fridge",
+  vacuum: "vacuum"
+};
+let LwEventsCard = class extends i {
+  constructor() {
+    super(...arguments);
+    this.events = {};
+    this._waste = [];
+    this._lastWasteFetch = 0;
+  }
+  updated() {
+    if (!this.hass || !this.events?.waste_calendar) return;
+    if (Date.now() - this._lastWasteFetch < 30 * 60 * 1e3) return;
+    this._lastWasteFetch = Date.now();
+    void this._fetchWaste();
+  }
+  async _fetchWaste() {
+    if (!this.hass || !this.events.waste_calendar) return;
+    const start = /* @__PURE__ */ new Date();
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    try {
+      const evs = await this.hass.callApi(
+        "GET",
+        `calendars/${this.events.waste_calendar}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
+      );
+      this._waste = Array.isArray(evs) ? evs.slice(0, 3) : [];
+    } catch {
+      this._waste = [];
+    }
+  }
+  _kindFromName(name) {
+    const n3 = name.toLowerCase();
+    if (n3.includes("spül") || n3.includes("dishwasher")) return "dishwasher";
+    if (n3.includes("trockner") || n3.includes("dryer")) return "dryer";
+    if (n3.includes("wäsche") || n3.includes("washer") || n3.includes("waschmaschine")) return "washer";
+    if (n3.includes("saug") || n3.includes("vacuum") || n3.includes("mäh") || n3.includes("mower")) return "vacuum";
+    if (n3.includes("oven") || n3.includes("backofen")) return "oven";
+    return "generic";
+  }
+  _readAppliance(a2) {
+    const stE = entityState(this.hass, a2.state_entity);
+    const state2 = stE?.state ?? "unknown";
+    const kind = this._kindFromName(a2.name);
+    const icon = a2.icon ?? APPLIANCE_ICON[kind] ?? "cog";
+    const progE = entityState(this.hass, a2.progress_entity);
+    let progress = progE ? parseFloat(progE.state) : NaN;
+    if (!Number.isFinite(progress)) progress = attrNum(stE, "progress", NaN);
+    const remE = entityState(this.hass, a2.remaining_entity);
+    let remaining = remE?.state ?? "";
+    if (!remaining) {
+      const mins = attrNum(stE, "remaining_time", NaN);
+      if (Number.isFinite(mins)) remaining = `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`;
+    }
+    const active = !["off", "idle", "standby", "unavailable", "unknown", "not_running", "docked"].includes(state2.toLowerCase());
+    return { state: state2, progress: Number.isFinite(progress) ? progress : 0, remaining, active, icon };
+  }
+  _stateLabel(s2) {
+    const map = {
+      running: "läuft",
+      run: "läuft",
+      cleaning: "reinigt",
+      mowing: "mäht",
+      paused: "Pause",
+      finished: "fertig",
+      in_use: "in Benutzung",
+      programmed: "programmiert",
+      off: "aus",
+      docked: "lädt",
+      idle: "bereit"
+    };
+    return map[s2.toLowerCase()] ?? s2;
+  }
+  _lowBatterySensors() {
+    if (!this.hass) return [];
+    const threshold = this.events.low_battery_threshold ?? 10;
+    const explicit = this.events.battery_entities ?? [];
+    const candidates = [];
+    if (explicit.length) {
+      explicit.forEach((id) => {
+        const e2 = entityState(this.hass, id);
+        if (e2) candidates.push(e2);
+      });
+    } else {
+      Object.values(this.hass.states).forEach((e2) => {
+        if (!e2.entity_id.startsWith("sensor.")) return;
+        if (e2.attributes.device_class !== "battery") return;
+        candidates.push(e2);
+      });
+    }
+    return candidates.filter((e2) => {
+      const v2 = parseFloat(e2.state);
+      return Number.isFinite(v2) && v2 <= threshold;
+    }).sort((a2, b2) => parseFloat(a2.state) - parseFloat(b2.state)).slice(0, 6);
+  }
+  _formatWasteDate(iso) {
+    const d2 = new Date(iso);
+    if (isNaN(d2.getTime())) return iso;
+    const today = /* @__PURE__ */ new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dd = new Date(d2);
+    dd.setHours(0, 0, 0, 0);
+    if (dd.getTime() === today.getTime()) return "Heute";
+    if (dd.getTime() === tomorrow.getTime()) return "Morgen";
+    return d2.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" });
+  }
+  render() {
+    const appliances = this.events.appliances ?? [];
+    const battery = this._lowBatterySensors();
+    const waste = this._waste;
+    const empty = !appliances.length && !battery.length && !waste.length;
+    return b`
+      <div class="card">
+        <lw-section-head sub="Aktuell" heading="Ereignisse"></lw-section-head>
+
+        ${empty ? b`<div class="empty">Keine aktiven Ereignisse</div>` : b`<div class="list">
+              ${appliances.length ? b`
+                    <div class="header-tag">Geräte</div>
+                    ${appliances.map((a2) => {
+      const r2 = this._readAppliance(a2);
+      return b`
+                        <div class=${"row" + (r2.active ? " active" : "")}>
+                          <div class=${"ico appliance" + (r2.active ? " active" : "")}>
+                            <lw-icon name=${r2.icon} .size=${16}></lw-icon>
+                          </div>
+                          <div class="body">
+                            <div class="name">${a2.name}</div>
+                            <div class="sub">
+                              ${this._stateLabel(r2.state)}${r2.remaining ? ` · noch ${r2.remaining}` : ""}
+                            </div>
+                            ${r2.active && r2.progress > 0 ? b`<div class="progress">
+                                  <div class="bar" style=${`width:${Math.min(100, r2.progress)}%`}></div>
+                                </div>` : A}
+                          </div>
+                          ${r2.active && r2.progress > 0 ? b`<div class="val">${Math.round(r2.progress)}%</div>` : A}
+                        </div>
+                      `;
+    })}
+                  ` : A}
+              ${waste.length ? b`
+                    <div class="header-tag">Abfall</div>
+                    ${waste.map(
+      (w2) => b`
+                        <div class="row">
+                          <div class="ico waste">
+                            <lw-icon name="package" .size=${16}></lw-icon>
+                          </div>
+                          <div class="body">
+                            <div class="name">${w2.summary}</div>
+                            <div class="sub">${this._formatWasteDate(w2.start)}</div>
+                          </div>
+                        </div>
+                      `
+    )}
+                  ` : A}
+              ${battery.length ? b`
+                    <div class="header-tag">Akkus schwach</div>
+                    ${battery.map(
+      (b$12) => b`
+                        <div class="row warn">
+                          <div class="ico battery">
+                            <lw-icon name="bolt" .size=${16}></lw-icon>
+                          </div>
+                          <div class="body">
+                            <div class="name">${friendlyName(b$12, b$12.entity_id)}</div>
+                            <div class="sub">${b$12.entity_id}</div>
+                          </div>
+                          <div class="val">${Math.round(parseFloat(b$12.state))}%</div>
+                        </div>
+                      `
+    )}
+                  ` : A}
+            </div>`}
+      </div>
+    `;
+  }
+};
+LwEventsCard.styles = i$3`
+    :host {
+      display: block;
+      height: 100%;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      gap: 8px;
+      min-width: 0;
+    }
+    .list {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .list::-webkit-scrollbar {
+      width: 0;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 10px 12px;
+      background: var(--card-inset);
+      border-radius: 11px;
+      border: 1px solid var(--border-soft);
+    }
+    .row.active {
+      border-color: color-mix(in oklab, var(--accent) 35%, var(--border-soft));
+      background: color-mix(in oklab, var(--accent) 8%, var(--card-inset));
+    }
+    .row.warn {
+      border-color: color-mix(in oklab, var(--warn) 35%, var(--border-soft));
+      background: color-mix(in oklab, var(--warn) 8%, var(--card-inset));
+    }
+    .ico {
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      background: var(--card);
+      color: var(--text-muted);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .ico.appliance.active {
+      background: var(--accent);
+      color: white;
+    }
+    .ico.battery {
+      background: color-mix(in oklab, var(--warn) 18%, transparent);
+      color: var(--warn);
+    }
+    .ico.waste {
+      background: color-mix(in oklab, var(--amber) 18%, transparent);
+      color: var(--amber);
+    }
+    .body {
+      flex: 1;
+      min-width: 0;
+    }
+    .name {
+      font-size: 12.5px;
+      font-weight: 500;
+      letter-spacing: -0.005em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .sub {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+    .progress {
+      margin-top: 5px;
+      height: 4px;
+      background: var(--card);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress .bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.4s ease-out;
+    }
+    .val {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      min-width: 36px;
+      text-align: right;
+    }
+    .empty {
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 24px 0;
+      text-align: center;
+    }
+    .header-tag {
+      font-size: 10px;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 500;
+      padding: 8px 4px 4px;
+    }
+  `;
+__decorateClass$m([
+  n2({ attribute: false })
+], LwEventsCard.prototype, "hass", 2);
+__decorateClass$m([
+  n2({ attribute: false })
+], LwEventsCard.prototype, "events", 2);
+__decorateClass$m([
+  r()
+], LwEventsCard.prototype, "_waste", 2);
+LwEventsCard = __decorateClass$m([
+  t("lw-events-card")
+], LwEventsCard);
+var __defProp$l = Object.defineProperty;
+var __getOwnPropDesc$l = Object.getOwnPropertyDescriptor;
+var __decorateClass$l = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$l(target, key) : target;
+  for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
+    if (decorator = decorators[i2])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$l(target, key, result);
   return result;
 };
 let LwOverviewPage = class extends i {
@@ -3190,8 +3918,16 @@ let LwOverviewPage = class extends i {
           </div>
 
           <lw-media-card .hass=${this.hass} .config=${this.config}></lw-media-card>
-          <lw-cameras-card .hass=${this.hass} .cameras=${ov.cameras ?? []}></lw-cameras-card>
+          <lw-cameras-card
+            .hass=${this.hass}
+            .cameras=${ov.cameras ?? []}
+            .cameraMotion=${ov.camera_motion ?? {}}
+          ></lw-cameras-card>
           <lw-calendar-card .hass=${this.hass} .entity=${ov.calendar}></lw-calendar-card>
+
+          <div class="full">
+            <lw-events-card .hass=${this.hass} .events=${ov.events ?? {}}></lw-events-card>
+          </div>
         </div>
       </div>
     `;
@@ -3214,13 +3950,36 @@ LwOverviewPage.styles = i$3`
     .grid {
       flex: 1;
       display: grid;
-      grid-template-columns: 1.55fr 1fr 1fr;
-      grid-template-rows: minmax(360px, 1.3fr) auto minmax(260px, 1fr);
-      gap: 12px;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+      grid-auto-rows: minmax(280px, auto);
+      gap: 14px;
       min-height: 0;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .grid::-webkit-scrollbar {
+      width: 6px;
+    }
+    .grid::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
     }
     .full {
       grid-column: 1 / -1;
+    }
+    .full > * {
+      display: block;
+      height: 100%;
+    }
+    @media (max-width: 1280px) {
+      .grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      }
+    }
+    @media (max-width: 760px) {
+      .grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
     }
     @keyframes rise {
       from {
@@ -3242,26 +4001,26 @@ LwOverviewPage.styles = i$3`
       }
     }
   `;
-__decorateClass$e([
+__decorateClass$l([
   n2({ attribute: false })
 ], LwOverviewPage.prototype, "hass", 2);
-__decorateClass$e([
+__decorateClass$l([
   n2({ attribute: false })
 ], LwOverviewPage.prototype, "config", 2);
-__decorateClass$e([
+__decorateClass$l([
   n2({ attribute: false })
 ], LwOverviewPage.prototype, "time", 2);
-LwOverviewPage = __decorateClass$e([
+LwOverviewPage = __decorateClass$l([
   t("lw-overview-page")
 ], LwOverviewPage);
-var __defProp$d = Object.defineProperty;
-var __getOwnPropDesc$d = Object.getOwnPropertyDescriptor;
-var __decorateClass$d = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$d(target, key) : target;
+var __defProp$k = Object.defineProperty;
+var __getOwnPropDesc$k = Object.getOwnPropertyDescriptor;
+var __decorateClass$k = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$k(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$d(target, key, result);
+  if (kind && result) __defProp$k(target, key, result);
   return result;
 };
 let LwGauge = class extends i {
@@ -3329,35 +4088,35 @@ LwGauge.styles = i$3`
       transition: stroke-dashoffset 0.4s ease-out;
     }
   `;
-__decorateClass$d([
+__decorateClass$k([
   n2({ type: Number })
 ], LwGauge.prototype, "value", 2);
-__decorateClass$d([
+__decorateClass$k([
   n2({ type: Number })
 ], LwGauge.prototype, "max", 2);
-__decorateClass$d([
+__decorateClass$k([
   n2({ type: Number })
 ], LwGauge.prototype, "size", 2);
-__decorateClass$d([
+__decorateClass$k([
   n2({ type: Number })
 ], LwGauge.prototype, "stroke", 2);
-__decorateClass$d([
+__decorateClass$k([
   n2({ type: String })
 ], LwGauge.prototype, "color", 2);
-__decorateClass$d([
+__decorateClass$k([
   n2({ type: String })
 ], LwGauge.prototype, "track", 2);
-LwGauge = __decorateClass$d([
+LwGauge = __decorateClass$k([
   t("lw-gauge")
 ], LwGauge);
-var __defProp$c = Object.defineProperty;
-var __getOwnPropDesc$c = Object.getOwnPropertyDescriptor;
-var __decorateClass$c = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$c(target, key) : target;
+var __defProp$j = Object.defineProperty;
+var __getOwnPropDesc$j = Object.getOwnPropertyDescriptor;
+var __decorateClass$j = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$j(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$c(target, key, result);
+  if (kind && result) __defProp$j(target, key, result);
   return result;
 };
 let LwStepper = class extends i {
@@ -3438,35 +4197,35 @@ LwStepper.styles = i$3`
       font-size: 11px;
     }
   `;
-__decorateClass$c([
+__decorateClass$j([
   n2({ type: Number })
 ], LwStepper.prototype, "value", 2);
-__decorateClass$c([
+__decorateClass$j([
   n2({ type: Number })
 ], LwStepper.prototype, "step", 2);
-__decorateClass$c([
+__decorateClass$j([
   n2({ type: Number })
 ], LwStepper.prototype, "min", 2);
-__decorateClass$c([
+__decorateClass$j([
   n2({ type: Number })
 ], LwStepper.prototype, "max", 2);
-__decorateClass$c([
+__decorateClass$j([
   n2({ type: String })
 ], LwStepper.prototype, "unit", 2);
-__decorateClass$c([
+__decorateClass$j([
   n2({ type: Boolean })
 ], LwStepper.prototype, "big", 2);
-LwStepper = __decorateClass$c([
+LwStepper = __decorateClass$j([
   t("lw-stepper")
 ], LwStepper);
-var __defProp$b = Object.defineProperty;
-var __getOwnPropDesc$b = Object.getOwnPropertyDescriptor;
-var __decorateClass$b = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$b(target, key) : target;
+var __defProp$i = Object.defineProperty;
+var __getOwnPropDesc$i = Object.getOwnPropertyDescriptor;
+var __decorateClass$i = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$i(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$b(target, key, result);
+  if (kind && result) __defProp$i(target, key, result);
   return result;
 };
 let LwClimateCard = class extends i {
@@ -3638,26 +4397,26 @@ LwClimateCard.styles = i$3`
       text-align: center;
     }
   `;
-__decorateClass$b([
+__decorateClass$i([
   n2({ attribute: false })
 ], LwClimateCard.prototype, "hass", 2);
-__decorateClass$b([
+__decorateClass$i([
   n2({ type: String })
 ], LwClimateCard.prototype, "entity", 2);
-__decorateClass$b([
+__decorateClass$i([
   n2({ type: String })
 ], LwClimateCard.prototype, "humidityEntity", 2);
-LwClimateCard = __decorateClass$b([
+LwClimateCard = __decorateClass$i([
   t("lw-climate-card")
 ], LwClimateCard);
-var __defProp$a = Object.defineProperty;
-var __getOwnPropDesc$a = Object.getOwnPropertyDescriptor;
-var __decorateClass$a = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$a(target, key) : target;
+var __defProp$h = Object.defineProperty;
+var __getOwnPropDesc$h = Object.getOwnPropertyDescriptor;
+var __decorateClass$h = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$h(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$a(target, key, result);
+  if (kind && result) __defProp$h(target, key, result);
   return result;
 };
 let LwToggle = class extends i {
@@ -3675,7 +4434,9 @@ let LwToggle = class extends i {
     );
   }
   render() {
-    const dim = this.size === "sm" ? { w: 30, h: 17, k: 11, t: 13 } : { w: 36, h: 20, k: 14, t: 16 };
+    const dim = this.size === "sm" ? { w: 30, h: 18, k: 12 } : { w: 36, h: 22, k: 16 };
+    const offX = 2;
+    const travel = dim.w - dim.k - 4;
     return b`
       <div
         class=${"t " + (this.on ? "on" : "")}
@@ -3686,7 +4447,7 @@ let LwToggle = class extends i {
       >
         <div
           class="k"
-          style=${`width:${dim.k}px;height:${dim.k}px;transform:translateX(${this.on ? dim.t : 0}px);`}
+          style=${`width:${dim.k}px;height:${dim.k}px;transform:translate(${offX + (this.on ? travel : 0)}px,-50%);`}
         ></div>
       </div>
     `;
@@ -3700,11 +4461,13 @@ LwToggle.styles = i$3`
       background: var(--card-inset);
       border-radius: 999px;
       border: 1px solid var(--border);
-      padding: 2px;
       position: relative;
       cursor: pointer;
       transition: background 0.18s, border-color 0.18s;
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      box-sizing: border-box;
+      padding: 0;
     }
     .t.on {
       background: var(--accent);
@@ -3714,28 +4477,32 @@ LwToggle.styles = i$3`
       background: var(--text-muted);
       border-radius: 50%;
       transition: transform 0.18s, background 0.18s;
+      position: absolute;
+      top: 50%;
+      left: 0;
+      margin: 0;
     }
     .t.on .k {
       background: var(--bg);
     }
   `;
-__decorateClass$a([
+__decorateClass$h([
   n2({ type: Boolean, reflect: true })
 ], LwToggle.prototype, "on", 2);
-__decorateClass$a([
+__decorateClass$h([
   n2({ type: String })
 ], LwToggle.prototype, "size", 2);
-LwToggle = __decorateClass$a([
+LwToggle = __decorateClass$h([
   t("lw-toggle")
 ], LwToggle);
-var __defProp$9 = Object.defineProperty;
-var __getOwnPropDesc$9 = Object.getOwnPropertyDescriptor;
-var __decorateClass$9 = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$9(target, key) : target;
+var __defProp$g = Object.defineProperty;
+var __getOwnPropDesc$g = Object.getOwnPropertyDescriptor;
+var __decorateClass$g = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$g(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$9(target, key, result);
+  if (kind && result) __defProp$g(target, key, result);
   return result;
 };
 let LwLightTile = class extends i {
@@ -3851,101 +4618,195 @@ LwLightTile.styles = i$3`
       padding-top: 8px;
     }
   `;
-__decorateClass$9([
+__decorateClass$g([
   n2({ type: String })
 ], LwLightTile.prototype, "name", 2);
-__decorateClass$9([
+__decorateClass$g([
   n2({ type: Boolean })
 ], LwLightTile.prototype, "on", 2);
-__decorateClass$9([
+__decorateClass$g([
   n2({ type: Number })
 ], LwLightTile.prototype, "brightness", 2);
-__decorateClass$9([
+__decorateClass$g([
   n2({ type: Boolean })
 ], LwLightTile.prototype, "compact", 2);
-LwLightTile = __decorateClass$9([
+LwLightTile = __decorateClass$g([
   t("lw-light-tile")
 ], LwLightTile);
-var __defProp$8 = Object.defineProperty;
-var __getOwnPropDesc$8 = Object.getOwnPropertyDescriptor;
-var __decorateClass$8 = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$8(target, key) : target;
+var __defProp$f = Object.defineProperty;
+var __getOwnPropDesc$f = Object.getOwnPropertyDescriptor;
+var __decorateClass$f = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$f(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$8(target, key, result);
+  if (kind && result) __defProp$f(target, key, result);
   return result;
+};
+const SCENE_ICON = {
+  ambiente: "moon",
+  ambient: "moon",
+  abend: "moon",
+  an: "lightbulb",
+  on: "lightbulb",
+  auto: "sparkle",
+  hell: "sun",
+  bright: "sun",
+  film: "film",
+  movie: "film",
+  lesen: "book",
+  read: "book",
+  kochen: "kettle",
+  cook: "kettle",
+  essen: "chair",
+  dinner: "chair"
 };
 let LwLightsCard = class extends i {
   constructor() {
     super(...arguments);
     this.lights = [];
+    this.scenes = [];
+    this.roomName = "";
+    this._popupOpen = false;
+    this._firing = null;
+    this._openPopup = () => this._popupOpen = true;
+    this._closePopup = () => this._popupOpen = false;
   }
   _onCount() {
     return this.lights.filter((id) => entityState(this.hass, id)?.state === "on").length;
   }
-  _allToggle() {
+  _allOff() {
     if (!this.hass) return;
-    const allOff = this.lights.every((id) => entityState(this.hass, id)?.state !== "on");
-    this.lights.forEach((id) => {
-      if (allOff) callLightTurnOn(this.hass, id);
-      else callLightTurnOff(this.hass, id);
-    });
+    this.lights.forEach((id) => callLightTurnOff(this.hass, id));
+  }
+  _runScene(id) {
+    if (!this.hass) return;
+    this._firing = id;
+    callSceneActivate(this.hass, id);
+    setTimeout(() => this._firing = null, 1e3);
+  }
+  _iconFor(id, name) {
+    const lc = (name + " " + id).toLowerCase();
+    for (const [k2, v2] of Object.entries(SCENE_ICON)) {
+      if (lc.includes(k2)) return v2;
+    }
+    return "sparkle";
+  }
+  _displayName(id, friendly) {
+    const room = this.roomName.toLowerCase();
+    if (room && friendly.toLowerCase().startsWith(room)) {
+      return friendly.slice(room.length).trim() || friendly;
+    }
+    const rest = id.split(".")[1] ?? id;
+    const parts = rest.split("_");
+    if (parts.length > 1) {
+      const last = parts[parts.length - 1];
+      return last.charAt(0).toUpperCase() + last.slice(1);
+    }
+    return friendly;
   }
   render() {
-    if (!this.lights.length) {
+    const hasScenes = this.scenes.length > 0;
+    const hasLights = this.lights.length > 0;
+    if (!hasScenes && !hasLights) {
       return b`<div class="card">
         <lw-section-head sub="0" heading="Beleuchtung"></lw-section-head>
-        <div class="empty">Keine Lichter konfiguriert</div>
+        <div class="empty">Keine Szenen oder Lichter konfiguriert</div>
       </div>`;
     }
     const count = this._onCount();
     const total = this.lights.length;
-    const allOff = count === 0;
     return b`
       <div class="card">
-        <lw-section-head sub=${`${count} von ${total} an`} heading="Beleuchtung">
-          <button slot="right" class="btn" @click=${this._allToggle}>
-            <lw-icon name="lightbulb" .size=${13}></lw-icon>
-            ${allOff ? "Alle an" : "Alle aus"}
+        <lw-section-head
+          sub=${total ? `${count} von ${total} an` : "Szenen"}
+          heading="Beleuchtung"
+        >
+          <button
+            slot="right"
+            class="gear"
+            title="Einzelsteuerung"
+            @click=${this._openPopup}
+          >
+            <lw-icon name="sliders" .size=${15}></lw-icon>
           </button>
         </lw-section-head>
-        <div class="grid">
-          ${this.lights.map((id) => {
+
+        <div class="scenes">
+          ${this.scenes.map((sid) => {
+      const e2 = entityState(this.hass, sid);
+      const name = friendlyName(e2, sid.split(".")[1]);
+      const displayName = this._displayName(sid, name);
+      return b`
+              <button
+                class=${"btn " + (this._firing === sid ? "firing" : "")}
+                @click=${() => this._runScene(sid)}
+              >
+                <div class="ico">
+                  <lw-icon name=${this._iconFor(sid, name)} .size=${18}></lw-icon>
+                </div>
+                <div class="name">${displayName}</div>
+              </button>
+            `;
+    })}
+          ${hasLights ? b`
+                <button class="btn off" @click=${this._allOff}>
+                  <div class="ico">
+                    <lw-icon name="x" .size=${18} .stroke=${2}></lw-icon>
+                  </div>
+                  <div class="name">Aus</div>
+                </button>
+              ` : A}
+        </div>
+      </div>
+
+      ${this._popupOpen ? b`
+            <div class="overlay" @click=${this._closePopup}>
+              <div class="sheet" @click=${(e2) => e2.stopPropagation()}>
+                <div class="sheet-head">
+                  <div>
+                    <div class="sub">Einzelsteuerung</div>
+                    <div class="title">${this.roomName || "Beleuchtung"}</div>
+                  </div>
+                  <button class="btn-sec" @click=${this._closePopup}>Schließen</button>
+                </div>
+
+                ${hasLights ? b`
+                      <div class="sheet-grid">
+                        ${this.lights.map((id) => {
       const e2 = entityState(this.hass, id);
       const name = friendlyName(e2, id.split(".")[1]);
       const on = e2?.state === "on";
       const bright = brightnessPct(e2) || (on ? 100 : 0);
       return b`
-              <lw-light-tile
-                .name=${name}
-                .on=${on}
-                .brightness=${bright}
-                @lw-toggle=${(ev) => this.hass && (ev.detail.value ? callLightTurnOn(this.hass, id) : callLightTurnOff(this.hass, id))}
-                @lw-brightness=${(ev) => this.hass && callLightTurnOn(this.hass, id, ev.detail.value)}
-              ></lw-light-tile>
-            `;
+                            <lw-light-tile
+                              .name=${name}
+                              .on=${on}
+                              .brightness=${bright}
+                              @lw-toggle=${(ev) => this.hass && (ev.detail.value ? callLightTurnOn(this.hass, id) : callLightTurnOff(this.hass, id))}
+                              @lw-brightness=${(ev) => this.hass && callLightTurnOn(this.hass, id, ev.detail.value)}
+                            ></lw-light-tile>
+                          `;
     })}
-        </div>
-      </div>
+                      </div>
+                    ` : b`<div class="empty">Keine Lichter im Raum konfiguriert</div>`}
 
-      <style>
-        .btn {
-          background: transparent;
-          border: 1px solid var(--border);
-          color: var(--text);
-          border-radius: 10px;
-          padding: 6px 12px;
-          font-size: 12.5px;
-          font-weight: 500;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .btn:hover {
-          background: var(--card);
-        }
-      </style>
+                <div class="sheet-actions">
+                  <button class="btn-sec" @click=${this._allOff}>Alle aus</button>
+                  <button
+                    class="btn-pri"
+                    @click=${() => {
+      if (this.hass) {
+        this.lights.forEach((id) => callLightTurnOn(this.hass, id));
+      }
+    }}
+                  >
+                    Alle an
+                  </button>
+                </div>
+              </div>
+            </div>
+          ` : A}
     `;
   }
 };
@@ -3963,19 +4824,64 @@ LwLightsCard.styles = i$3`
       flex-direction: column;
       height: 100%;
       min-height: 0;
+      gap: 14px;
     }
-    .grid {
+    .scenes {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      grid-auto-rows: minmax(112px, 1fr);
-      align-content: start;
-      gap: 8px;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
       flex: 1;
       min-height: 0;
-      overflow: auto;
+      align-content: center;
     }
-    .grid::-webkit-scrollbar {
-      width: 0;
+    .btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 16px;
+      background: var(--card-inset);
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      color: var(--text);
+      text-align: left;
+      transition: background 0.18s, border-color 0.18s, transform 0.1s;
+      cursor: pointer;
+      min-height: 88px;
+    }
+    .btn:hover {
+      background: var(--card);
+      border-color: var(--border);
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .btn.firing {
+      background: color-mix(in oklab, var(--amber) 24%, var(--card-inset));
+      border-color: color-mix(in oklab, var(--amber) 60%, var(--border-soft));
+    }
+    .btn.off {
+      background: var(--card-inset);
+    }
+    .ico {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--card);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border-soft);
+    }
+    .btn.firing .ico {
+      background: var(--amber);
+      color: white;
+      border-color: var(--amber);
+    }
+    .name {
+      font-size: 13.5px;
+      font-weight: 500;
+      letter-spacing: -0.005em;
     }
     .empty {
       color: var(--text-muted);
@@ -3983,24 +4889,138 @@ LwLightsCard.styles = i$3`
       padding: 24px 0;
       text-align: center;
     }
+    .gear {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 9px;
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .gear:hover {
+      color: var(--text);
+      background: var(--card-inset);
+    }
+
+    /* Popup overlay */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 200;
+      display: grid;
+      place-items: center;
+      animation: fade 0.18s ease-out both;
+      padding: 24px;
+    }
+    @keyframes fade {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    .sheet {
+      background: var(--bg);
+      border-radius: 20px;
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-lg);
+      padding: 22px;
+      max-width: 720px;
+      width: 100%;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .sheet-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+    .sheet-head .title {
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+    }
+    .sheet-head .sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 500;
+    }
+    .sheet-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .sheet-grid::-webkit-scrollbar {
+      width: 0;
+    }
+    .sheet-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-soft);
+    }
+    .btn-pri {
+      padding: 8px 16px;
+      background: var(--text);
+      color: var(--bg);
+      border: 1px solid var(--text);
+      border-radius: 10px;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-sec {
+      padding: 8px 16px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
   `;
-__decorateClass$8([
+__decorateClass$f([
   n2({ attribute: false })
 ], LwLightsCard.prototype, "hass", 2);
-__decorateClass$8([
+__decorateClass$f([
   n2({ type: Array })
 ], LwLightsCard.prototype, "lights", 2);
-LwLightsCard = __decorateClass$8([
+__decorateClass$f([
+  n2({ type: Array })
+], LwLightsCard.prototype, "scenes", 2);
+__decorateClass$f([
+  n2({ type: String })
+], LwLightsCard.prototype, "roomName", 2);
+__decorateClass$f([
+  r()
+], LwLightsCard.prototype, "_popupOpen", 2);
+__decorateClass$f([
+  r()
+], LwLightsCard.prototype, "_firing", 2);
+LwLightsCard = __decorateClass$f([
   t("lw-lights-card")
 ], LwLightsCard);
-var __defProp$7 = Object.defineProperty;
-var __getOwnPropDesc$7 = Object.getOwnPropertyDescriptor;
-var __decorateClass$7 = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$7(target, key) : target;
+var __defProp$e = Object.defineProperty;
+var __getOwnPropDesc$e = Object.getOwnPropertyDescriptor;
+var __decorateClass$e = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$e(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$7(target, key, result);
+  if (kind && result) __defProp$e(target, key, result);
   return result;
 };
 let LwVSlider = class extends i {
@@ -4093,32 +5113,32 @@ LwVSlider.styles = i$3`
       background: rgba(255, 255, 255, 0.18);
     }
   `;
-__decorateClass$7([
+__decorateClass$e([
   n2({ type: Number })
 ], LwVSlider.prototype, "value", 2);
-__decorateClass$7([
+__decorateClass$e([
   n2({ type: Number })
 ], LwVSlider.prototype, "height", 2);
-__decorateClass$7([
+__decorateClass$e([
   n2({ type: Number })
 ], LwVSlider.prototype, "width", 2);
-__decorateClass$7([
+__decorateClass$e([
   n2({ type: String })
 ], LwVSlider.prototype, "accent", 2);
-__decorateClass$7([
+__decorateClass$e([
   e(".v")
 ], LwVSlider.prototype, "_track", 2);
-LwVSlider = __decorateClass$7([
+LwVSlider = __decorateClass$e([
   t("lw-vslider")
 ], LwVSlider);
-var __defProp$6 = Object.defineProperty;
-var __getOwnPropDesc$6 = Object.getOwnPropertyDescriptor;
-var __decorateClass$6 = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$6(target, key) : target;
+var __defProp$d = Object.defineProperty;
+var __getOwnPropDesc$d = Object.getOwnPropertyDescriptor;
+var __decorateClass$d = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$d(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$6(target, key, result);
+  if (kind && result) __defProp$d(target, key, result);
   return result;
 };
 let LwBlindsCard = class extends i {
@@ -4168,11 +5188,11 @@ let LwBlindsCard = class extends i {
                 <div class="pct">${pos}%</div>
                 <div class="name">${name}</div>
                 <div class="btns">
-                  <button class="btn" @click=${() => this._set(id, 100)}>
-                    <lw-icon name="arrow-up" .size=${11}></lw-icon>
+                  <button class="btn" title="Hoch" @click=${() => this._set(id, 100)}>
+                    <lw-icon name="arrow-up" .size=${16} .stroke=${2}></lw-icon>
                   </button>
-                  <button class="btn" @click=${() => this._set(id, 0)}>
-                    <lw-icon name="arrow-down" .size=${11}></lw-icon>
+                  <button class="btn" title="Runter" @click=${() => this._set(id, 0)}>
+                    <lw-icon name="arrow-down" .size=${16} .stroke=${2}></lw-icon>
                   </button>
                 </div>
               </div>
@@ -4224,21 +5244,27 @@ LwBlindsCard.styles = i$3`
     }
     .btns {
       display: flex;
-      gap: 4px;
+      gap: 6px;
     }
     .btn {
-      width: 22px;
-      height: 22px;
-      border-radius: 6px;
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
       border: 1px solid var(--border);
       background: var(--card);
       color: var(--text-muted);
       display: grid;
       place-items: center;
       cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
     }
     .btn:hover {
       color: var(--text);
+      border-color: var(--border-strong);
+      background: var(--card-elev);
+    }
+    .btn:active {
+      transform: scale(0.95);
     }
     .empty {
       color: var(--text-muted);
@@ -4256,23 +5282,23 @@ LwBlindsCard.styles = i$3`
       font-weight: 500;
     }
   `;
-__decorateClass$6([
+__decorateClass$d([
   n2({ attribute: false })
 ], LwBlindsCard.prototype, "hass", 2);
-__decorateClass$6([
+__decorateClass$d([
   n2({ type: Array })
 ], LwBlindsCard.prototype, "covers", 2);
-LwBlindsCard = __decorateClass$6([
+LwBlindsCard = __decorateClass$d([
   t("lw-blinds-card")
 ], LwBlindsCard);
-var __defProp$5 = Object.defineProperty;
-var __getOwnPropDesc$5 = Object.getOwnPropertyDescriptor;
-var __decorateClass$5 = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$5(target, key) : target;
+var __defProp$c = Object.defineProperty;
+var __getOwnPropDesc$c = Object.getOwnPropertyDescriptor;
+var __decorateClass$c = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$c(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$5(target, key, result);
+  if (kind && result) __defProp$c(target, key, result);
   return result;
 };
 let LwMediaMini = class extends i {
@@ -4447,23 +5473,623 @@ LwMediaMini.styles = i$3`
       text-align: center;
     }
   `;
-__decorateClass$5([
+__decorateClass$c([
   n2({ attribute: false })
 ], LwMediaMini.prototype, "hass", 2);
-__decorateClass$5([
+__decorateClass$c([
   n2({ type: String })
 ], LwMediaMini.prototype, "entity", 2);
-LwMediaMini = __decorateClass$5([
+LwMediaMini = __decorateClass$c([
   t("lw-media-mini")
 ], LwMediaMini);
-var __defProp$4 = Object.defineProperty;
-var __getOwnPropDesc$4 = Object.getOwnPropertyDescriptor;
-var __decorateClass$4 = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$4(target, key) : target;
+var __defProp$b = Object.defineProperty;
+var __getOwnPropDesc$b = Object.getOwnPropertyDescriptor;
+var __decorateClass$b = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$b(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$4(target, key, result);
+  if (kind && result) __defProp$b(target, key, result);
+  return result;
+};
+let LwExtraVacuum = class extends i {
+  constructor() {
+    super(...arguments);
+    this.name = "";
+  }
+  _stateLabel(s2) {
+    const map = {
+      cleaning: "reinigt",
+      docked: "lädt",
+      returning: "fährt zurück",
+      paused: "pausiert",
+      error: "Fehler",
+      idle: "bereit"
+    };
+    return map[s2.toLowerCase()] ?? s2;
+  }
+  _call(service) {
+    if (!this.hass) return;
+    void this.hass.callService("vacuum", service, {}, { entity_id: this.entity });
+  }
+  render() {
+    const e2 = entityState(this.hass, this.entity);
+    const state = e2?.state ?? "unknown";
+    const battery = Math.round(attrNum(e2, "battery_level", NaN));
+    const cleaning = ["cleaning", "returning", "paused"].includes(state.toLowerCase());
+    const displayName = this.name || friendlyName(e2, this.entity.split(".")[1]);
+    return b`
+      <div class=${"tile" + (cleaning ? " cleaning" : "")}>
+        <div class="head">
+          <div class=${"ico" + (cleaning ? " cleaning" : "")}>
+            <lw-icon name="vacuum" .size=${16}></lw-icon>
+          </div>
+          ${Number.isFinite(battery) ? b`<span class=${"battery" + (battery <= 20 ? " low" : "")}>
+                <lw-icon name="bolt" .size=${10}></lw-icon>${battery}%
+              </span>` : ""}
+        </div>
+        <div>
+          <div class="name">${displayName}</div>
+          <div class="state">${this._stateLabel(state)}</div>
+        </div>
+        <div class="actions">
+          ${cleaning ? b`
+                <button class="btn" @click=${() => this._call("pause")}>
+                  <lw-icon name="pause" .size=${12}></lw-icon>Pause
+                </button>
+                <button class="btn primary" @click=${() => this._call("return_to_base")}>
+                  Dock
+                </button>
+              ` : b`
+                <button class="btn primary" @click=${() => this._call("start")}>
+                  <lw-icon name="play" .size=${12}></lw-icon>Start
+                </button>
+                <button class="btn" @click=${() => this._call("locate")}>
+                  <lw-icon name="sound" .size=${12}></lw-icon>
+                </button>
+              `}
+        </div>
+      </div>
+    `;
+  }
+};
+LwExtraVacuum.styles = i$3`
+    :host {
+      display: block;
+    }
+    .tile {
+      background: var(--card-inset);
+      border: 1px solid var(--border-soft);
+      border-radius: 13px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 110px;
+      height: 100%;
+    }
+    .tile.cleaning {
+      background: color-mix(in oklab, var(--accent) 12%, var(--card-inset));
+      border-color: color-mix(in oklab, var(--accent) 45%, var(--border-soft));
+    }
+    .head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .ico {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: var(--card);
+      color: var(--text-muted);
+      display: grid;
+      place-items: center;
+    }
+    .ico.cleaning {
+      background: var(--accent);
+      color: white;
+    }
+    .battery {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .battery.low {
+      color: var(--warn);
+    }
+    .name {
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+    .state {
+      font-size: 10.5px;
+      color: var(--text-muted);
+    }
+    .actions {
+      display: flex;
+      gap: 6px;
+      margin-top: auto;
+    }
+    .btn {
+      flex: 1;
+      padding: 7px;
+      border-radius: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font: inherit;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .btn:hover {
+      background: var(--card-elev);
+    }
+    .btn.primary {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+  `;
+__decorateClass$b([
+  n2({ attribute: false })
+], LwExtraVacuum.prototype, "hass", 2);
+__decorateClass$b([
+  n2({ type: String })
+], LwExtraVacuum.prototype, "entity", 2);
+__decorateClass$b([
+  n2({ type: String })
+], LwExtraVacuum.prototype, "name", 2);
+LwExtraVacuum = __decorateClass$b([
+  t("lw-extra-vacuum")
+], LwExtraVacuum);
+var __defProp$a = Object.defineProperty;
+var __getOwnPropDesc$a = Object.getOwnPropertyDescriptor;
+var __decorateClass$a = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$a(target, key) : target;
+  for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
+    if (decorator = decorators[i2])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$a(target, key, result);
+  return result;
+};
+let LwExtraMower = class extends i {
+  constructor() {
+    super(...arguments);
+    this.name = "";
+  }
+  _stateLabel(s2) {
+    const map = {
+      mowing: "mäht",
+      docked: "in Station",
+      returning: "fährt zurück",
+      paused: "pausiert",
+      error: "Fehler",
+      idle: "bereit",
+      charging: "lädt"
+    };
+    return map[s2.toLowerCase()] ?? s2;
+  }
+  _call(service) {
+    if (!this.hass) return;
+    const domain = this.entity.split(".")[0];
+    void this.hass.callService(domain, service, {}, { entity_id: this.entity });
+  }
+  render() {
+    const e2 = entityState(this.hass, this.entity);
+    const state = e2?.state ?? "unknown";
+    const battery = Math.round(attrNum(e2, "battery_level", NaN));
+    const mowing = ["mowing", "returning"].includes(state.toLowerCase());
+    const displayName = this.name || friendlyName(e2, this.entity.split(".")[1]);
+    return b`
+      <div class=${"tile" + (mowing ? " mowing" : "")}>
+        <div class="head">
+          <div class=${"ico" + (mowing ? " mowing" : "")}>
+            <lw-icon name="leaf" .size=${16}></lw-icon>
+          </div>
+          ${Number.isFinite(battery) ? b`<span class=${"battery" + (battery <= 20 ? " low" : "")}>
+                <lw-icon name="bolt" .size=${10}></lw-icon>${battery}%
+              </span>` : ""}
+        </div>
+        <div>
+          <div class="name">${displayName}</div>
+          <div class="state">${this._stateLabel(state)}</div>
+        </div>
+        <div class="actions">
+          ${mowing ? b`<button class="btn" @click=${() => this._call("pause")}>Pause</button>
+                <button class="btn primary" @click=${() => this._call("dock")}>Dock</button>` : b`<button class="btn primary" @click=${() => this._call("start_mowing")}>Start</button>
+                <button class="btn" @click=${() => this._call("dock")}>Dock</button>`}
+        </div>
+      </div>
+    `;
+  }
+};
+LwExtraMower.styles = i$3`
+    :host {
+      display: block;
+    }
+    .tile {
+      background: var(--card-inset);
+      border: 1px solid var(--border-soft);
+      border-radius: 13px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 110px;
+      height: 100%;
+    }
+    .tile.mowing {
+      background: color-mix(in oklab, var(--accent) 12%, var(--card-inset));
+      border-color: color-mix(in oklab, var(--accent) 45%, var(--border-soft));
+    }
+    .head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .ico {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: var(--card);
+      color: var(--text-muted);
+      display: grid;
+      place-items: center;
+    }
+    .ico.mowing {
+      background: var(--accent);
+      color: white;
+    }
+    .battery {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .battery.low {
+      color: var(--warn);
+    }
+    .name {
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+    .state {
+      font-size: 10.5px;
+      color: var(--text-muted);
+    }
+    .actions {
+      display: flex;
+      gap: 6px;
+      margin-top: auto;
+    }
+    .btn {
+      flex: 1;
+      padding: 7px;
+      border-radius: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font: inherit;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: var(--card-elev);
+    }
+    .btn.primary {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+  `;
+__decorateClass$a([
+  n2({ attribute: false })
+], LwExtraMower.prototype, "hass", 2);
+__decorateClass$a([
+  n2({ type: String })
+], LwExtraMower.prototype, "entity", 2);
+__decorateClass$a([
+  n2({ type: String })
+], LwExtraMower.prototype, "name", 2);
+LwExtraMower = __decorateClass$a([
+  t("lw-extra-mower")
+], LwExtraMower);
+var __defProp$9 = Object.defineProperty;
+var __getOwnPropDesc$9 = Object.getOwnPropertyDescriptor;
+var __decorateClass$9 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$9(target, key) : target;
+  for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
+    if (decorator = decorators[i2])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$9(target, key, result);
+  return result;
+};
+let LwExtraSprinkler = class extends i {
+  constructor() {
+    super(...arguments);
+    this.name = "";
+  }
+  _subText() {
+    const stE = entityState(this.hass, this.state_entity);
+    if (!stE) return "";
+    const unit = stE.attributes.unit_of_measurement ?? "";
+    return `${stE.state}${unit ? " " + unit : ""}`;
+  }
+  _start() {
+    if (!this.hass) return;
+    callToggle(this.hass, this.entity);
+  }
+  render() {
+    const e2 = entityState(this.hass, this.entity);
+    const on = e2 ? isOn(e2.state) : false;
+    const displayName = this.name || friendlyName(e2, this.entity.split(".")[1]);
+    const sub = this._subText();
+    return b`
+      <div class=${"tile" + (on ? " on" : "")}>
+        <div class="head">
+          <div class=${"ico" + (on ? " on" : "")}>
+            <lw-icon name="water" .size=${16}></lw-icon>
+          </div>
+          <span class=${"pill" + (on ? " on" : "")}>${on ? "LÄUFT" : "AUS"}</span>
+        </div>
+        <div>
+          <div class="name">${displayName}</div>
+          ${sub ? b`<div class="sub">${sub}</div>` : ""}
+        </div>
+        <div class="actions">
+          <button
+            class=${"btn" + (on ? "" : " primary")}
+            @click=${this._start}
+          >
+            ${on ? "Stop" : "Start"}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+};
+LwExtraSprinkler.styles = i$3`
+    :host {
+      display: block;
+    }
+    .tile {
+      background: var(--card-inset);
+      border: 1px solid var(--border-soft);
+      border-radius: 13px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 110px;
+      height: 100%;
+    }
+    .tile.on {
+      background: color-mix(in oklab, var(--blue) 18%, var(--card-inset));
+      border-color: color-mix(in oklab, var(--blue) 50%, var(--border-soft));
+    }
+    .head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .ico {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: var(--card);
+      color: var(--text-muted);
+      display: grid;
+      place-items: center;
+    }
+    .ico.on {
+      background: var(--blue);
+      color: white;
+    }
+    .name {
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+    .sub {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--card);
+      font-size: 10px;
+      font-family: 'Geist Mono', monospace;
+      color: var(--text-muted);
+    }
+    .pill.on {
+      background: var(--blue);
+      color: white;
+    }
+    .actions {
+      display: flex;
+      gap: 6px;
+      margin-top: auto;
+    }
+    .btn {
+      flex: 1;
+      padding: 7px;
+      border-radius: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font: inherit;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn.primary {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+  `;
+__decorateClass$9([
+  n2({ attribute: false })
+], LwExtraSprinkler.prototype, "hass", 2);
+__decorateClass$9([
+  n2({ type: String })
+], LwExtraSprinkler.prototype, "entity", 2);
+__decorateClass$9([
+  n2({ type: String })
+], LwExtraSprinkler.prototype, "name", 2);
+__decorateClass$9([
+  n2({ type: String })
+], LwExtraSprinkler.prototype, "state_entity", 2);
+LwExtraSprinkler = __decorateClass$9([
+  t("lw-extra-sprinkler")
+], LwExtraSprinkler);
+var __defProp$8 = Object.defineProperty;
+var __getOwnPropDesc$8 = Object.getOwnPropertyDescriptor;
+var __decorateClass$8 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$8(target, key) : target;
+  for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
+    if (decorator = decorators[i2])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$8(target, key, result);
+  return result;
+};
+let LwExtraFan = class extends i {
+  constructor() {
+    super(...arguments);
+    this.name = "";
+    this.icon = "fan";
+    this.tint = "var(--accent)";
+  }
+  _sub() {
+    const stE = entityState(this.hass, this.state_entity);
+    if (!stE) return "";
+    const v2 = parseFloat(stE.state);
+    const unit = stE.attributes.unit_of_measurement ?? "";
+    if (Number.isFinite(v2) && unit) return `${Math.round(v2)} ${unit}`;
+    return `${stE.state}${unit ? " " + unit : ""}`;
+  }
+  render() {
+    this.style.setProperty("--tint", this.tint);
+    const e2 = entityState(this.hass, this.entity);
+    const on = e2 ? isOn(e2.state) : false;
+    const displayName = this.name || friendlyName(e2, this.entity.split(".")[1]);
+    const sub = this._sub();
+    return b`
+      <div class=${"tile" + (on ? " on" : "")}>
+        <div class="head">
+          <div class=${"ico" + (on ? " on" : "")}>
+            <lw-icon name=${this.icon} .size=${16}></lw-icon>
+          </div>
+          <lw-toggle
+            .on=${on}
+            size="sm"
+            @change=${() => this.hass && callToggle(this.hass, this.entity)}
+          ></lw-toggle>
+        </div>
+        <div class="body">
+          <div class="name">${displayName}</div>
+          <div class="sub">${sub || (on ? "An" : "Aus")}</div>
+        </div>
+      </div>
+    `;
+  }
+};
+LwExtraFan.styles = i$3`
+    :host {
+      display: block;
+    }
+    .tile {
+      background: var(--card-inset);
+      border: 1px solid var(--border-soft);
+      border-radius: 13px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 110px;
+      height: 100%;
+    }
+    .tile.on {
+      background: color-mix(in oklab, var(--tint) 14%, var(--card-inset));
+      border-color: color-mix(in oklab, var(--tint) 45%, var(--border-soft));
+    }
+    .head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .ico {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: var(--card);
+      color: var(--text-muted);
+      display: grid;
+      place-items: center;
+    }
+    .ico.on {
+      background: var(--tint);
+      color: white;
+    }
+    .body {
+      margin-top: auto;
+    }
+    .name {
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+    .sub {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+  `;
+__decorateClass$8([
+  n2({ attribute: false })
+], LwExtraFan.prototype, "hass", 2);
+__decorateClass$8([
+  n2({ type: String })
+], LwExtraFan.prototype, "entity", 2);
+__decorateClass$8([
+  n2({ type: String })
+], LwExtraFan.prototype, "name", 2);
+__decorateClass$8([
+  n2({ type: String })
+], LwExtraFan.prototype, "state_entity", 2);
+__decorateClass$8([
+  n2({ type: String })
+], LwExtraFan.prototype, "icon", 2);
+__decorateClass$8([
+  n2({ type: String })
+], LwExtraFan.prototype, "tint", 2);
+LwExtraFan = __decorateClass$8([
+  t("lw-extra-fan")
+], LwExtraFan);
+var __defProp$7 = Object.defineProperty;
+var __getOwnPropDesc$7 = Object.getOwnPropertyDescriptor;
+var __decorateClass$7 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$7(target, key) : target;
+  for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
+    if (decorator = decorators[i2])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$7(target, key, result);
   return result;
 };
 let LwFeatureTile = class extends i {
@@ -4549,48 +6175,33 @@ LwFeatureTile.styles = i$3`
       background: var(--tint, var(--amber));
     }
   `;
-__decorateClass$4([
+__decorateClass$7([
   n2({ type: String })
 ], LwFeatureTile.prototype, "icon", 2);
-__decorateClass$4([
+__decorateClass$7([
   n2({ type: String })
 ], LwFeatureTile.prototype, "name", 2);
-__decorateClass$4([
+__decorateClass$7([
   n2({ type: String })
 ], LwFeatureTile.prototype, "sub", 2);
-__decorateClass$4([
+__decorateClass$7([
   n2({ type: Boolean })
 ], LwFeatureTile.prototype, "on", 2);
-__decorateClass$4([
+__decorateClass$7([
   n2({ type: String })
 ], LwFeatureTile.prototype, "tint", 2);
-LwFeatureTile = __decorateClass$4([
+LwFeatureTile = __decorateClass$7([
   t("lw-feature-tile")
 ], LwFeatureTile);
-var __defProp$3 = Object.defineProperty;
-var __getOwnPropDesc$3 = Object.getOwnPropertyDescriptor;
-var __decorateClass$3 = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$3(target, key) : target;
+var __defProp$6 = Object.defineProperty;
+var __getOwnPropDesc$6 = Object.getOwnPropertyDescriptor;
+var __decorateClass$6 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$6(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$3(target, key, result);
+  if (kind && result) __defProp$6(target, key, result);
   return result;
-};
-const EXTRA_ICON = {
-  tv: "tv",
-  fireplace: "fire",
-  fan: "fan",
-  "towel-warmer": "fire",
-  printer: "printer",
-  monitor: "monitor",
-  meeting: "mic",
-  lock: "lock",
-  garage: "garage",
-  irrigation: "water",
-  vacuum: "vacuum",
-  camera: "camera",
-  bell: "bell"
 };
 let LwRoomExtras = class extends i {
   constructor() {
@@ -4599,43 +6210,95 @@ let LwRoomExtras = class extends i {
     this.heading = "Geräte";
     this.sub = "Räumlich";
   }
-  _tint(kind) {
-    if (kind === "fireplace" || kind === "towel-warmer") return "var(--warn)";
-    if (kind === "vacuum" || kind === "fan") return "var(--accent)";
-    return "var(--amber)";
-  }
-  _sub(kind, on, e2) {
-    if (!e2) return on ? "An" : "Aus";
-    if (kind === "fireplace") return on ? "Brennt" : "Aus";
-    if (kind === "tv") return on ? e2.attributes?.app_name ?? "An" : "Aus";
-    if (kind === "vacuum") {
-      const battery = e2.attributes?.battery_level;
-      return battery ? `${e2.state} · ${battery}%` : e2.state;
+  _renderExtra(x2) {
+    if (!x2.entity) return A;
+    switch (x2.kind) {
+      case "vacuum":
+        return b`<lw-extra-vacuum
+          .hass=${this.hass}
+          .entity=${x2.entity}
+          .name=${x2.name}
+        ></lw-extra-vacuum>`;
+      case "mower":
+        return b`<lw-extra-mower
+          .hass=${this.hass}
+          .entity=${x2.entity}
+          .name=${x2.name}
+        ></lw-extra-mower>`;
+      case "irrigation":
+        return b`<lw-extra-sprinkler
+          .hass=${this.hass}
+          .entity=${x2.entity}
+          .name=${x2.name}
+          .state_entity=${x2.state_entity}
+        ></lw-extra-sprinkler>`;
+      case "air-purifier":
+        return b`<lw-extra-fan
+          .hass=${this.hass}
+          .entity=${x2.entity}
+          .name=${x2.name}
+          .state_entity=${x2.state_entity}
+          icon="wind"
+          tint="var(--accent)"
+        ></lw-extra-fan>`;
+      case "dehumidifier":
+        return b`<lw-extra-fan
+          .hass=${this.hass}
+          .entity=${x2.entity}
+          .name=${x2.name}
+          .state_entity=${x2.state_entity}
+          icon="droplet"
+          tint="var(--blue)"
+        ></lw-extra-fan>`;
+      case "fan":
+        return b`<lw-extra-fan
+          .hass=${this.hass}
+          .entity=${x2.entity}
+          .name=${x2.name}
+          .state_entity=${x2.state_entity}
+          icon="fan"
+          tint="var(--accent)"
+        ></lw-extra-fan>`;
+      case "fireplace":
+        return b`<lw-extra-fan
+          .hass=${this.hass}
+          .entity=${x2.entity}
+          .name=${x2.name}
+          .state_entity=${x2.state_entity}
+          icon="fire"
+          tint="var(--warn)"
+        ></lw-extra-fan>`;
+      case "tv":
+        return b`<lw-extra-fan
+          .hass=${this.hass}
+          .entity=${x2.entity}
+          .name=${x2.name}
+          .state_entity=${x2.state_entity}
+          icon="tv"
+          tint="var(--amber)"
+        ></lw-extra-fan>`;
+      default:
+        return b`<lw-extra-fan
+          .hass=${this.hass}
+          .entity=${x2.entity}
+          .name=${x2.name}
+          .state_entity=${x2.state_entity}
+          icon="cog"
+          tint="var(--text-muted)"
+        ></lw-extra-fan>`;
     }
-    return on ? "An" : "Aus";
   }
   render() {
-    if (!this.extras.length) return A;
+    if (!this.extras.length) {
+      return b`<div class="card">
+        <lw-section-head sub=${this.sub} heading=${this.heading}></lw-section-head>
+        <div class="empty">Keine Geräte konfiguriert</div>
+      </div>`;
+    }
     return b`
       <div class="card">
         <lw-section-head sub=${this.sub} heading=${this.heading}></lw-section-head>
-        <div class="grid">
-          ${this.extras.map((x2) => {
-      const e2 = entityState(this.hass, x2.entity);
-      const on = e2 ? isOn(e2.state) : false;
-      const name = x2.name || friendlyName(e2, x2.entity?.split(".")[1] ?? "");
-      return b`
-              <lw-feature-tile
-                .icon=${EXTRA_ICON[x2.kind] ?? "cog"}
-                .name=${name}
-                .sub=${this._sub(x2.kind, on, e2)}
-                .on=${on}
-                .tint=${this._tint(x2.kind)}
-                @click=${() => this.hass && x2.entity && callToggle(this.hass, x2.entity)}
-              ></lw-feature-tile>
-            `;
-    })}
-        </div>
+        <div class="grid">${this.extras.map((x2) => this._renderExtra(x2))}</div>
       </div>
     `;
   }
@@ -4657,12 +6320,16 @@ LwRoomExtras.styles = i$3`
     }
     .grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-auto-rows: minmax(100px, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      grid-auto-rows: minmax(110px, auto);
       align-content: start;
       gap: 8px;
       flex: 1;
       min-height: 0;
+      overflow: auto;
+    }
+    .grid::-webkit-scrollbar {
+      width: 0;
     }
     .empty {
       color: var(--text-muted);
@@ -4671,29 +6338,29 @@ LwRoomExtras.styles = i$3`
       text-align: center;
     }
   `;
-__decorateClass$3([
+__decorateClass$6([
   n2({ attribute: false })
 ], LwRoomExtras.prototype, "hass", 2);
-__decorateClass$3([
+__decorateClass$6([
   n2({ type: Array })
 ], LwRoomExtras.prototype, "extras", 2);
-__decorateClass$3([
+__decorateClass$6([
   n2({ type: String })
 ], LwRoomExtras.prototype, "heading", 2);
-__decorateClass$3([
+__decorateClass$6([
   n2({ type: String })
 ], LwRoomExtras.prototype, "sub", 2);
-LwRoomExtras = __decorateClass$3([
+LwRoomExtras = __decorateClass$6([
   t("lw-room-extras")
 ], LwRoomExtras);
-var __defProp$2 = Object.defineProperty;
-var __getOwnPropDesc$2 = Object.getOwnPropertyDescriptor;
-var __decorateClass$2 = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$2(target, key) : target;
+var __defProp$5 = Object.defineProperty;
+var __getOwnPropDesc$5 = Object.getOwnPropertyDescriptor;
+var __decorateClass$5 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$5(target, key) : target;
   for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
     if (decorator = decorators[i2])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$2(target, key, result);
+  if (kind && result) __defProp$5(target, key, result);
   return result;
 };
 let LwRoomPage = class extends i {
@@ -4739,7 +6406,12 @@ let LwRoomPage = class extends i {
         <div class="grid">
           <lw-climate-card .hass=${this.hass} .entity=${room.climate}></lw-climate-card>
 
-          ${room.lights?.length ? b`<lw-lights-card .hass=${this.hass} .lights=${room.lights}></lw-lights-card>` : b`<div></div>`}
+          ${room.lights?.length || room.scenes?.length ? b`<lw-lights-card
+                .hass=${this.hass}
+                .lights=${room.lights ?? []}
+                .scenes=${room.scenes ?? []}
+                .roomName=${room.name}
+              ></lw-lights-card>` : b`<div></div>`}
 
           <lw-room-extras
             .hass=${this.hass}
@@ -4777,15 +6449,36 @@ LwRoomPage.styles = i$3`
     .grid {
       flex: 1;
       display: grid;
-      grid-template-columns: 1fr 1.5fr;
-      grid-template-rows: minmax(0, 320px) minmax(0, 1fr);
-      gap: 12px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+      grid-auto-rows: minmax(280px, auto);
+      gap: 14px;
       min-height: 0;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .grid::-webkit-scrollbar {
+      width: 6px;
+    }
+    .grid::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
     }
     .bottom-right {
-      display: flex;
-      gap: 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px;
       min-height: 0;
+    }
+    .bottom-right > * {
+      min-width: 0;
+    }
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .bottom-right {
+        grid-template-columns: minmax(0, 1fr);
+      }
     }
     @keyframes rise {
       from {
@@ -4804,21 +6497,436 @@ LwRoomPage.styles = i$3`
       }
     }
   `;
-__decorateClass$2([
+__decorateClass$5([
   n2({ attribute: false })
 ], LwRoomPage.prototype, "hass", 2);
-__decorateClass$2([
+__decorateClass$5([
   n2({ attribute: false })
 ], LwRoomPage.prototype, "config", 2);
-__decorateClass$2([
+__decorateClass$5([
   n2({ type: String })
 ], LwRoomPage.prototype, "roomKey", 2);
-__decorateClass$2([
+__decorateClass$5([
   n2({ attribute: false })
 ], LwRoomPage.prototype, "time", 2);
-LwRoomPage = __decorateClass$2([
+LwRoomPage = __decorateClass$5([
   t("lw-room-page")
 ], LwRoomPage);
+var __defProp$4 = Object.defineProperty;
+var __getOwnPropDesc$4 = Object.getOwnPropertyDescriptor;
+var __decorateClass$4 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$4(target, key) : target;
+  for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
+    if (decorator = decorators[i2])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$4(target, key, result);
+  return result;
+};
+let LwEntityPicker = class extends i {
+  constructor() {
+    super(...arguments);
+    this.value = "";
+    this.placeholder = "Entity wählen…";
+    this.domains = [];
+    this.allowEmpty = true;
+    this.compact = false;
+    this._open = false;
+    this._filter = "";
+    this._onClick = (e2) => {
+      if (!this.contains(e2.target)) {
+        this._open = false;
+      }
+    };
+  }
+  _options() {
+    if (!this.hass) return [];
+    const filter = this._filter.toLowerCase();
+    return Object.values(this.hass.states).filter((s2) => {
+      if (this.domains.length && !this.domains.some((d2) => s2.entity_id.startsWith(d2 + "."))) {
+        return false;
+      }
+      if (!filter) return true;
+      const name = (s2.attributes.friendly_name ?? "").toLowerCase();
+      return s2.entity_id.toLowerCase().includes(filter) || name.includes(filter);
+    }).map((s2) => ({
+      id: s2.entity_id,
+      name: s2.attributes.friendly_name ?? s2.entity_id
+    })).sort((a2, b2) => a2.name.localeCompare(b2.name)).slice(0, 200);
+  }
+  _selectedLabel() {
+    if (!this.value) return "";
+    const e2 = this.hass?.states[this.value];
+    return e2 ? `${e2.attributes.friendly_name ?? this.value}` : this.value;
+  }
+  _emit(value) {
+    this.value = value;
+    this.dispatchEvent(
+      new CustomEvent("change", { detail: { value }, bubbles: true, composed: true })
+    );
+  }
+  _pick(id) {
+    this._emit(id);
+    this._open = false;
+    this._filter = "";
+  }
+  _clear(e2) {
+    e2.stopPropagation();
+    this._emit("");
+  }
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener("click", this._onClick);
+  }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener("click", this._onClick);
+  }
+  render() {
+    const opts = this._open ? this._options() : [];
+    this._selectedLabel() || this._filter;
+    return b`
+      <div class="wrap">
+        <input
+          class="input"
+          .value=${this._open ? this._filter : this._selectedLabel()}
+          placeholder=${this.placeholder}
+          @click=${() => this._open = true}
+          @focus=${() => this._open = true}
+          @input=${(e2) => {
+      this._filter = e2.target.value;
+      this._open = true;
+    }}
+        />
+        ${this.value && this.allowEmpty ? b`<button class="clear" @click=${this._clear}>
+              <lw-icon name="x" .size=${12} .stroke=${2}></lw-icon>
+            </button>` : ""}
+        <span class="chevron"><lw-icon name="arrow-down" .size=${12}></lw-icon></span>
+        ${this._open ? b`<div class="menu">
+              ${opts.length === 0 ? b`<div class="empty">Keine Treffer</div>` : opts.map(
+      (o2) => b`
+                      <div
+                        class=${"opt" + (o2.id === this.value ? " selected" : "")}
+                        @click=${() => this._pick(o2.id)}
+                      >
+                        <div>${o2.name}</div>
+                        <div class="id">${o2.id}</div>
+                      </div>
+                    `
+    )}
+            </div>` : ""}
+      </div>
+    `;
+  }
+};
+LwEntityPicker.styles = i$3`
+    :host {
+      display: block;
+      position: relative;
+    }
+    .wrap {
+      position: relative;
+    }
+    .input {
+      width: 100%;
+      padding: 8px 32px 8px 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    :host([compact]) .input {
+      padding: 6px 28px 6px 10px;
+      font-size: 12px;
+      border-radius: 7px;
+    }
+    .input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .clear,
+    .chevron {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      display: grid;
+      place-items: center;
+    }
+    .clear {
+      right: 22px;
+    }
+    .chevron {
+      right: 4px;
+      pointer-events: none;
+    }
+    .menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow-lg);
+      max-height: 280px;
+      overflow: auto;
+      z-index: 50;
+    }
+    .menu::-webkit-scrollbar {
+      width: 0;
+    }
+    .opt {
+      padding: 8px 12px;
+      font-size: 12.5px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .opt:hover {
+      background: var(--card-inset);
+    }
+    .opt.selected {
+      background: color-mix(in oklab, var(--accent) 14%, transparent);
+    }
+    .opt .id {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      font-family: 'Geist Mono', monospace;
+    }
+    .empty {
+      padding: 16px;
+      color: var(--text-muted);
+      font-size: 12px;
+      text-align: center;
+    }
+  `;
+__decorateClass$4([
+  n2({ attribute: false })
+], LwEntityPicker.prototype, "hass", 2);
+__decorateClass$4([
+  n2({ type: String })
+], LwEntityPicker.prototype, "value", 2);
+__decorateClass$4([
+  n2({ type: String })
+], LwEntityPicker.prototype, "placeholder", 2);
+__decorateClass$4([
+  n2({ type: Array })
+], LwEntityPicker.prototype, "domains", 2);
+__decorateClass$4([
+  n2({ type: Boolean })
+], LwEntityPicker.prototype, "allowEmpty", 2);
+__decorateClass$4([
+  n2({ type: Boolean })
+], LwEntityPicker.prototype, "compact", 2);
+__decorateClass$4([
+  r()
+], LwEntityPicker.prototype, "_open", 2);
+__decorateClass$4([
+  r()
+], LwEntityPicker.prototype, "_filter", 2);
+__decorateClass$4([
+  e(".input")
+], LwEntityPicker.prototype, "_input", 2);
+LwEntityPicker = __decorateClass$4([
+  t("lw-entity-picker")
+], LwEntityPicker);
+var __defProp$3 = Object.defineProperty;
+var __getOwnPropDesc$3 = Object.getOwnPropertyDescriptor;
+var __decorateClass$3 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$3(target, key) : target;
+  for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
+    if (decorator = decorators[i2])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$3(target, key, result);
+  return result;
+};
+let LwEntityMulti = class extends i {
+  constructor() {
+    super(...arguments);
+    this.value = [];
+    this.domains = [];
+    this.placeholder = "Entity hinzufügen…";
+  }
+  _add(e2) {
+    const id = e2.detail.value;
+    if (!id || this.value.includes(id)) return;
+    this._emit([...this.value, id]);
+    const picker = this.renderRoot.querySelector("lw-entity-picker");
+    if (picker) picker.value = "";
+  }
+  _remove(id) {
+    this._emit(this.value.filter((v2) => v2 !== id));
+  }
+  _emit(next) {
+    this.value = next;
+    this.dispatchEvent(
+      new CustomEvent("change", { detail: { value: next }, bubbles: true, composed: true })
+    );
+  }
+  _name(id) {
+    const e2 = this.hass?.states[id];
+    return friendlyName(e2, id);
+  }
+  render() {
+    return b`
+      ${this.value.length === 0 ? b`<div class="empty">— noch nichts gewählt —</div>` : b`<div class="chips">
+            ${this.value.map(
+      (id) => b`
+                <span class="chip">
+                  <span class="nm" title=${id}>${this._name(id)}</span>
+                  <button @click=${() => this._remove(id)}>
+                    <lw-icon name="x" .size=${10} .stroke=${2.5}></lw-icon>
+                  </button>
+                </span>
+              `
+    )}
+          </div>`}
+      <lw-entity-picker
+        .hass=${this.hass}
+        .domains=${this.domains}
+        placeholder=${this.placeholder}
+        value=""
+        @change=${this._add}
+      ></lw-entity-picker>
+    `;
+  }
+};
+LwEntityMulti.styles = i$3`
+    :host {
+      display: block;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px 5px 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 12px;
+      max-width: 100%;
+    }
+    .chip .nm {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 200px;
+    }
+    .chip button {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      padding: 0;
+    }
+    .chip button:hover {
+      color: var(--warn);
+      background: color-mix(in oklab, var(--warn) 12%, transparent);
+    }
+    .empty {
+      font-size: 11.5px;
+      color: var(--text-faint);
+      margin-bottom: 8px;
+    }
+  `;
+__decorateClass$3([
+  n2({ attribute: false })
+], LwEntityMulti.prototype, "hass", 2);
+__decorateClass$3([
+  n2({ type: Array })
+], LwEntityMulti.prototype, "value", 2);
+__decorateClass$3([
+  n2({ type: Array })
+], LwEntityMulti.prototype, "domains", 2);
+__decorateClass$3([
+  n2({ type: String })
+], LwEntityMulti.prototype, "placeholder", 2);
+LwEntityMulti = __decorateClass$3([
+  t("lw-entity-multi")
+], LwEntityMulti);
+var __defProp$2 = Object.defineProperty;
+var __getOwnPropDesc$2 = Object.getOwnPropertyDescriptor;
+var __decorateClass$2 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$2(target, key) : target;
+  for (var i2 = decorators.length - 1, decorator; i2 >= 0; i2--)
+    if (decorator = decorators[i2])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$2(target, key, result);
+  return result;
+};
+let LwTextInput = class extends i {
+  constructor() {
+    super(...arguments);
+    this.value = "";
+    this.placeholder = "";
+    this.type = "text";
+  }
+  render() {
+    return b`<input
+      type=${this.type}
+      .value=${this.value ?? ""}
+      placeholder=${this.placeholder}
+      @input=${(e2) => this.dispatchEvent(
+      new CustomEvent("change", {
+        detail: { value: e2.target.value },
+        bubbles: true,
+        composed: true
+      })
+    )}
+    />`;
+  }
+};
+LwTextInput.styles = i$3`
+    :host {
+      display: block;
+    }
+    input {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+  `;
+__decorateClass$2([
+  n2({ type: String })
+], LwTextInput.prototype, "value", 2);
+__decorateClass$2([
+  n2({ type: String })
+], LwTextInput.prototype, "placeholder", 2);
+__decorateClass$2([
+  n2({ type: String })
+], LwTextInput.prototype, "type", 2);
+LwTextInput = __decorateClass$2([
+  t("lw-text-input")
+], LwTextInput);
 var __defProp$1 = Object.defineProperty;
 var __getOwnPropDesc$1 = Object.getOwnPropertyDescriptor;
 var __decorateClass$1 = (decorators, target, key, kind) => {
@@ -4829,532 +6937,883 @@ var __decorateClass$1 = (decorators, target, key, kind) => {
   if (kind && result) __defProp$1(target, key, result);
   return result;
 };
-let LwConfigHelper = class extends i {
+const ROOM_ICONS = [
+  "sofa",
+  "kettle",
+  "bed",
+  "shower",
+  "desk",
+  "chair",
+  "door",
+  "tree",
+  "cog",
+  "home",
+  "fire",
+  "garage",
+  "plant",
+  "water"
+];
+const EXTRA_KINDS = [
+  { id: "vacuum", label: "Saugroboter", icon: "vacuum" },
+  { id: "mower", label: "Mähroboter", icon: "leaf" },
+  { id: "irrigation", label: "Sprinkler (Smart Irrigation)", icon: "water" },
+  { id: "air-purifier", label: "Luftreiniger", icon: "wind" },
+  { id: "dehumidifier", label: "Luftentfeuchter", icon: "droplet" },
+  { id: "fan", label: "Lüfter", icon: "fan" },
+  { id: "fireplace", label: "Kamin", icon: "fire" },
+  { id: "tv", label: "TV", icon: "tv" },
+  { id: "generic", label: "Sonstiges (Schalter)", icon: "cog" }
+];
+let LwEditPage = class extends i {
   constructor() {
     super(...arguments);
     this.config = DEFAULT_CONFIG;
-    this._draft = DEFAULT_CONFIG;
+    this._tab = "allgemein";
     this._expandedRoom = null;
+    this._close = () => {
+      this.dispatchEvent(new CustomEvent("close", { bubbles: true, composed: true }));
+    };
   }
-  connectedCallback() {
-    super.connectedCallback();
-    this._draft = JSON.parse(JSON.stringify(this.config));
+  _update(patch) {
+    const next = typeof patch === "function" ? patch(this.config) : { ...this.config, ...patch };
+    this.config = next;
+    configStore.set(next);
   }
-  _entities(domain) {
-    if (!this.hass) return [];
-    return Object.values(this.hass.states).filter((s2) => s2.entity_id.startsWith(domain + ".")).map((s2) => ({ id: s2.entity_id, name: s2.attributes.friendly_name ?? s2.entity_id })).sort((a2, b2) => a2.name.localeCompare(b2.name));
+  _patchOverview(key, value) {
+    this._update((c2) => ({ ...c2, overview: { ...c2.overview, [key]: value } }));
   }
-  _setOverview(key, value) {
-    this._draft = { ...this._draft, overview: { ...this._draft.overview, [key]: value } };
-  }
-  _setEnergy(key, value) {
-    this._draft = {
-      ...this._draft,
-      overview: {
-        ...this._draft.overview,
-        energy: { ...this._draft.overview.energy ?? {}, [key]: value || void 0 }
+  _patchRoom(key, patch) {
+    this._update((c2) => ({
+      ...c2,
+      rooms: {
+        ...c2.rooms,
+        [key]: { ...c2.rooms[key] ?? { name: key }, ...patch }
       }
-    };
+    }));
   }
-  _setRoom(key, patch) {
-    this._draft = {
-      ...this._draft,
-      rooms: { ...this._draft.rooms, [key]: { ...this._draft.rooms[key], ...patch } }
-    };
+  _deleteRoom(key) {
+    if (!confirm(`Raum „${this.config.rooms[key]?.name ?? key}" wirklich löschen?`)) return;
+    this._update((c2) => {
+      const r2 = { ...c2.rooms };
+      delete r2[key];
+      return { ...c2, rooms: r2 };
+    });
   }
   _addRoom() {
-    const key = prompt("Raum-Key (z.B. wohnzimmer):")?.trim().toLowerCase();
+    const key = prompt("Raum-ID (z.B. wohnzimmer, draussen):")?.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
     if (!key) return;
-    const name = prompt("Anzeigename:", key)?.trim() ?? key;
-    this._setRoom(key, { name, icon: "cog" });
+    if (this.config.rooms[key]) {
+      alert("Raum existiert bereits");
+      return;
+    }
+    const name = prompt("Anzeigename:", key.charAt(0).toUpperCase() + key.slice(1))?.trim() ?? key;
+    this._patchRoom(key, { name, icon: "cog" });
     this._expandedRoom = key;
   }
-  _yaml() {
-    const c2 = this._draft;
-    const lines = [
-      "panel_custom:",
-      "  - name: lindenweg-dashboard",
-      `    sidebar_title: ${this._yamlEscape(c2.household_name)}`,
-      "    sidebar_icon: mdi:home-variant",
-      "    url_path: lindenweg",
-      "    module_url: /hacsfiles/ha-lindenweg-dashboard/lindenweg-dashboard.js",
-      "    config:",
-      `      theme: ${c2.theme}`,
-      `      household_name: ${this._yamlEscape(c2.household_name)}`
-    ];
-    const ov = c2.overview;
-    const ovLines = [];
-    if (ov.weather) ovLines.push(`        weather: ${ov.weather}`);
-    if (ov.calendar) ovLines.push(`        calendar: ${ov.calendar}`);
-    if (ov.alarm_panel) ovLines.push(`        alarm_panel: ${ov.alarm_panel}`);
-    if (ov.presence?.length) {
-      ovLines.push("        presence:");
-      ov.presence.forEach((id) => ovLines.push(`          - ${id}`));
-    }
-    if (ov.scenes?.length) {
-      ovLines.push("        scenes:");
-      ov.scenes.forEach((id) => ovLines.push(`          - ${id}`));
-    }
-    if (ov.cameras?.length) {
-      ovLines.push("        cameras:");
-      ov.cameras.forEach((id) => ovLines.push(`          - ${id}`));
-    }
-    if (ov.energy && Object.values(ov.energy).some(Boolean)) {
-      ovLines.push("        energy:");
-      Object.entries(ov.energy).forEach(([k2, v2]) => {
-        if (v2) ovLines.push(`          ${k2}: ${v2}`);
-      });
-    }
-    if (ovLines.length) {
-      lines.push("      overview:");
-      lines.push(...ovLines);
-    }
-    if (Object.keys(c2.rooms).length) {
-      lines.push("      rooms:");
-      Object.entries(c2.rooms).forEach(([key, r2]) => {
-        lines.push(`        ${key}:`);
-        lines.push(`          name: ${this._yamlEscape(r2.name)}`);
-        if (r2.icon) lines.push(`          icon: ${r2.icon}`);
-        if (r2.climate) lines.push(`          climate: ${r2.climate}`);
-        if (r2.media_player) lines.push(`          media_player: ${r2.media_player}`);
-        if (r2.lights?.length) {
-          lines.push("          lights:");
-          r2.lights.forEach((id) => lines.push(`            - ${id}`));
-        }
-        if (r2.covers?.length) {
-          lines.push("          covers:");
-          r2.covers.forEach((id) => lines.push(`            - ${id}`));
-        }
-      });
-    }
-    return lines.join("\n");
-  }
-  _yamlEscape(s2) {
-    return /[:#&*!|>'"%@`]/.test(s2) ? JSON.stringify(s2) : s2;
-  }
-  _copy() {
-    navigator.clipboard?.writeText(this._yaml());
-  }
-  _close() {
-    this.dispatchEvent(new CustomEvent("close", { bubbles: true, composed: true }));
-  }
-  _multiInput(value, set) {
-    return b`<input
-      type="text"
-      .value=${(value ?? []).join(", ")}
-      placeholder="entity1, entity2, …"
-      @change=${(e2) => {
-      const v2 = e2.target.value.split(",").map((s2) => s2.trim()).filter(Boolean);
-      set(v2);
-    }}
-    />`;
-  }
-  render() {
-    const ov = this._draft.overview;
-    const rooms = Object.entries(this._draft.rooms);
+  // ---------- Tab: Allgemein ----------
+  _renderGeneral() {
     return b`
-      <div class="sheet" @click=${(e2) => e2.stopPropagation()}>
-        <h2>Lindenweg Dashboard · Config Helper</h2>
-        <p class="lead">
-          Wähle deine HA-Entities, kopiere den generierten YAML-Block in
-          <code>configuration.yaml</code> und starte HA neu. Änderungen werden
-          <strong>nicht direkt gespeichert</strong> — der HA Panel-Custom-Mechanismus
-          ist YAML-basiert.
-        </p>
-
-        <div class="section">
-          <h3>Allgemein</h3>
-          <div class="row">
-            <label>Name</label>
-            <input
-              type="text"
-              .value=${this._draft.household_name}
-              @input=${(e2) => this._draft = {
-      ...this._draft,
-      household_name: e2.target.value
-    }}
-            />
-          </div>
-          <div class="row">
-            <label>Theme</label>
-            <select
-              .value=${this._draft.theme}
-              @change=${(e2) => this._draft = {
-      ...this._draft,
-      theme: e2.target.value
-    }}
-            >
-              <option value="linen">Linen (hell)</option>
-              <option value="walnut">Walnut (dark)</option>
-            </select>
-          </div>
+      <div class="card">
+        <h3>Allgemein</h3>
+        <div class="row">
+          <label>Name des Zuhauses</label>
+          <lw-text-input
+            .value=${this.config.household_name}
+            placeholder="z.B. Haus Lindenweg"
+            @change=${(e2) => this._update({ household_name: e2.detail.value })}
+          ></lw-text-input>
         </div>
-
-        <div class="section">
-          <h3>Übersicht</h3>
-          <div class="row">
-            <label>Wetter</label>
-            <select
-              .value=${ov.weather ?? ""}
-              @change=${(e2) => this._setOverview("weather", e2.target.value || void 0)}
-            >
-              <option value="">— keins —</option>
-              ${this._entities("weather").map(
-      (o2) => b`<option value=${o2.id}>${o2.name}</option>`
-    )}
-            </select>
-          </div>
-          <div class="row">
-            <label>Kalender</label>
-            <select
-              .value=${ov.calendar ?? ""}
-              @change=${(e2) => this._setOverview("calendar", e2.target.value || void 0)}
-            >
-              <option value="">— keiner —</option>
-              ${this._entities("calendar").map(
-      (o2) => b`<option value=${o2.id}>${o2.name}</option>`
-    )}
-            </select>
-          </div>
-          <div class="row">
-            <label>Alarmanlage</label>
-            <select
-              .value=${ov.alarm_panel ?? ""}
-              @change=${(e2) => this._setOverview(
-      "alarm_panel",
-      e2.target.value || void 0
-    )}
-            >
-              <option value="">— keine —</option>
-              ${this._entities("alarm_control_panel").map(
-      (o2) => b`<option value=${o2.id}>${o2.name}</option>`
-    )}
-            </select>
-          </div>
-          <div class="row">
-            <label>Personen</label>
-            ${this._multiInput(ov.presence, (v2) => this._setOverview("presence", v2))}
-          </div>
-          <div class="row">
-            <label>Szenen</label>
-            ${this._multiInput(ov.scenes, (v2) => this._setOverview("scenes", v2))}
-          </div>
-          <div class="row">
-            <label>Kameras</label>
-            ${this._multiInput(ov.cameras, (v2) => this._setOverview("cameras", v2))}
-          </div>
-        </div>
-
-        <div class="section">
-          <h3>Energie</h3>
-          ${[
-      ["pv_now", "PV Leistung jetzt"],
-      ["pv_today", "PV Ertrag heute"],
-      ["consumption", "Verbrauch jetzt"],
-      ["grid_feed", "Einspeisung"],
-      ["grid_draw", "Bezug"],
-      ["battery_level", "Akku %"],
-      ["battery_flow", "Akku Fluss"]
-    ].map(
-      ([k2, label]) => b`
-              <div class="row">
-                <label>${label}</label>
-                <input
-                  type="text"
-                  list="energy-entities"
-                  .value=${ov.energy?.[k2] ?? ""}
-                  placeholder="sensor.…"
-                  @change=${(e2) => this._setEnergy(k2, e2.target.value)}
-                />
-              </div>
-            `
-    )}
-          <datalist id="energy-entities">
-            ${this._entities("sensor").map((o2) => b`<option value=${o2.id}>${o2.name}</option>`)}
-          </datalist>
-        </div>
-
-        <div class="section">
-          <h3>Räume</h3>
-          ${rooms.length === 0 ? b`<p class="note">Noch keine Räume — Klick auf „+ Raum hinzufügen"</p>` : A}
-          ${rooms.map(
-      ([key, r2]) => b`
-              <div class="room-card">
-                <div class="room-head" @click=${() => this._expandedRoom = this._expandedRoom === key ? null : key}>
-                  <div class="name">${r2.name}</div>
-                  <div class="count">
-                    ${r2.lights?.length ?? 0} Lichter ·
-                    ${r2.covers?.length ?? 0} Rollläden
-                  </div>
-                </div>
-                ${this._expandedRoom === key ? b`
-                      <div class="room-body">
-                        <div class="row">
-                          <label>Name</label>
-                          <input
-                            type="text"
-                            .value=${r2.name}
-                            @input=${(e2) => this._setRoom(key, { name: e2.target.value })}
-                          />
-                        </div>
-                        <div class="row">
-                          <label>Icon</label>
-                          <input
-                            type="text"
-                            .value=${r2.icon ?? ""}
-                            placeholder="sofa, kettle, bed, desk, …"
-                            @input=${(e2) => this._setRoom(key, { icon: e2.target.value })}
-                          />
-                        </div>
-                        <div class="row">
-                          <label>Climate</label>
-                          <select
-                            .value=${r2.climate ?? ""}
-                            @change=${(e2) => this._setRoom(key, {
-        climate: e2.target.value || void 0
-      })}
-                          >
-                            <option value="">— keins —</option>
-                            ${this._entities("climate").map(
-        (o2) => b`<option value=${o2.id}>${o2.name}</option>`
-      )}
-                          </select>
-                        </div>
-                        <div class="row">
-                          <label>Media Player</label>
-                          <select
-                            .value=${r2.media_player ?? ""}
-                            @change=${(e2) => this._setRoom(key, {
-        media_player: e2.target.value || void 0
-      })}
-                          >
-                            <option value="">— keins —</option>
-                            ${this._entities("media_player").map(
-        (o2) => b`<option value=${o2.id}>${o2.name}</option>`
-      )}
-                          </select>
-                        </div>
-                        <div class="row">
-                          <label>Lichter</label>
-                          ${this._multiInput(r2.lights, (v2) => this._setRoom(key, { lights: v2 }))}
-                        </div>
-                        <div class="row">
-                          <label>Rollläden</label>
-                          ${this._multiInput(r2.covers, (v2) => this._setRoom(key, { covers: v2 }))}
-                        </div>
-                      </div>
-                    ` : A}
-              </div>
-            `
-    )}
-          <button class="add-room" @click=${this._addRoom}>+ Raum hinzufügen</button>
-        </div>
-
-        <div class="yaml">
-          <div class="yaml-head">
-            <div class="title">Generiertes YAML</div>
-            <button class="btn" @click=${this._copy}>Kopieren</button>
-          </div>
-          <pre>${this._yaml()}</pre>
-        </div>
-
-        <div class="actions">
-          <button class="btn" @click=${this._close}>Schließen</button>
+        <div class="row">
+          <label>Theme</label>
+          <select
+            .value=${this.config.theme}
+            @change=${(e2) => this._update({ theme: e2.target.value })}
+          >
+            <option value="linen">Linen (hell / warm)</option>
+            <option value="walnut">Walnut (dunkel / warm)</option>
+          </select>
         </div>
       </div>
     `;
   }
+  // ---------- Tab: Overview ----------
+  _renderOverview() {
+    const ov = this.config.overview;
+    return b`
+      <div class="card">
+        <h3>Übersicht — Kernelemente</h3>
+        <div class="row">
+          <label>Wetter-Entity</label>
+          <lw-entity-picker
+            .hass=${this.hass}
+            .domains=${["weather"]}
+            .value=${ov.weather ?? ""}
+            @change=${(e2) => this._patchOverview("weather", e2.detail.value || void 0)}
+          ></lw-entity-picker>
+        </div>
+        <div class="row">
+          <label>Kalender (heute)</label>
+          <lw-entity-picker
+            .hass=${this.hass}
+            .domains=${["calendar"]}
+            .value=${ov.calendar ?? ""}
+            @change=${(e2) => this._patchOverview("calendar", e2.detail.value || void 0)}
+          ></lw-entity-picker>
+        </div>
+        <div class="row">
+          <label>Alarmanlage</label>
+          <lw-entity-picker
+            .hass=${this.hass}
+            .domains=${["alarm_control_panel"]}
+            .value=${ov.alarm_panel ?? ""}
+            @change=${(e2) => this._patchOverview("alarm_panel", e2.detail.value || void 0)}
+          ></lw-entity-picker>
+        </div>
+        <div class="row tall">
+          <label>Personen (Avatare)</label>
+          <lw-entity-multi
+            .hass=${this.hass}
+            .value=${ov.presence ?? []}
+            .domains=${["person"]}
+            @change=${(e2) => this._patchOverview("presence", e2.detail.value)}
+          ></lw-entity-multi>
+        </div>
+        <div class="row tall">
+          <label>Szenen (Schnellzugriff)</label>
+          <lw-entity-multi
+            .hass=${this.hass}
+            .value=${ov.scenes ?? []}
+            .domains=${["scene"]}
+            @change=${(e2) => this._patchOverview("scenes", e2.detail.value)}
+          ></lw-entity-multi>
+        </div>
+        <div class="row tall">
+          <label>Kameras</label>
+          <lw-entity-multi
+            .hass=${this.hass}
+            .value=${ov.cameras ?? []}
+            .domains=${["camera"]}
+            @change=${(e2) => this._patchOverview("cameras", e2.detail.value)}
+          ></lw-entity-multi>
+        </div>
+      </div>
+    `;
+  }
+  // ---------- Tab: Energie ----------
+  _renderEnergy() {
+    const energy = this.config.overview.energy ?? {};
+    const set = (key, value) => {
+      this._patchOverview("energy", { ...energy, [key]: value || void 0 });
+    };
+    const fields = [
+      ["pv_now", "PV Leistung jetzt (W oder kW)"],
+      ["pv_today", "PV Ertrag heute (kWh)"],
+      ["consumption", "Hausverbrauch jetzt"],
+      ["grid_feed", "Netz-Einspeisung"],
+      ["grid_draw", "Netz-Bezug"],
+      ["battery_level", "Akku Ladestand (%)"],
+      ["battery_flow", "Akku Fluss (W, negativ=lädt)"]
+    ];
+    return b`
+      <div class="card">
+        <h3>Energie — Sensor-Zuordnung</h3>
+        ${fields.map(
+      ([k2, label]) => b`
+            <div class="row">
+              <label>${label}</label>
+              <lw-entity-picker
+                .hass=${this.hass}
+                .domains=${["sensor"]}
+                .value=${energy[k2] ?? ""}
+                @change=${(e2) => set(k2, e2.detail.value)}
+              ></lw-entity-picker>
+            </div>
+          `
+    )}
+      </div>
+    `;
+  }
+  // ---------- Tab: Events ----------
+  _renderEvents() {
+    const ev = this.config.overview.events ?? {};
+    const setEv = (key, value) => {
+      this._patchOverview("events", { ...ev, [key]: value });
+    };
+    const addAppliance = () => {
+      const next = [
+        ...ev.appliances ?? [],
+        { name: "Neues Gerät", state_entity: "" }
+      ];
+      setEv("appliances", next);
+    };
+    const updateAppliance = (i2, patch) => {
+      const list = [...ev.appliances ?? []];
+      list[i2] = { ...list[i2], ...patch };
+      setEv("appliances", list);
+    };
+    const removeAppliance = (i2) => {
+      const list = [...ev.appliances ?? []];
+      list.splice(i2, 1);
+      setEv("appliances", list);
+    };
+    return b`
+      <div class="card">
+        <h3>Geräte mit Fortschritt</h3>
+        ${ev.appliances?.length ? ev.appliances.map(
+      (a2, i2) => b`
+                <div class="appliance-row">
+                  <lw-text-input
+                    .value=${a2.name}
+                    placeholder="Name"
+                    @change=${(e2) => updateAppliance(i2, { name: e2.detail.value })}
+                  ></lw-text-input>
+                  <lw-entity-picker
+                    .hass=${this.hass}
+                    .domains=${["sensor", "binary_sensor"]}
+                    .value=${a2.state_entity}
+                    placeholder="Status-Entity"
+                    @change=${(e2) => updateAppliance(i2, { state_entity: e2.detail.value })}
+                  ></lw-entity-picker>
+                  <lw-entity-picker
+                    .hass=${this.hass}
+                    .domains=${["sensor"]}
+                    .value=${a2.progress_entity ?? ""}
+                    placeholder="Fortschritt %"
+                    @change=${(e2) => updateAppliance(i2, { progress_entity: e2.detail.value || void 0 })}
+                  ></lw-entity-picker>
+                  <button class="del-btn" @click=${() => removeAppliance(i2)}>Entfernen</button>
+                </div>
+              `
+    ) : ""}
+        <button class="add-btn" @click=${addAppliance} style="margin-top:12px">
+          <lw-icon name="plus" .size=${13} .stroke=${2}></lw-icon>Gerät hinzufügen
+        </button>
+      </div>
+
+      <div class="card">
+        <h3>Abfall / Müll</h3>
+        <div class="row">
+          <label>Waste Collection Kalender</label>
+          <lw-entity-picker
+            .hass=${this.hass}
+            .domains=${["calendar"]}
+            .value=${ev.waste_calendar ?? ""}
+            @change=${(e2) => setEv("waste_calendar", e2.detail.value || void 0)}
+          ></lw-entity-picker>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Schwache Akkus</h3>
+        <div class="row">
+          <label>Schwelle (%)</label>
+          <lw-text-input
+            type="number"
+            .value=${String(ev.low_battery_threshold ?? 10)}
+            @change=${(e2) => setEv("low_battery_threshold", parseInt(e2.detail.value, 10) || 10)}
+          ></lw-text-input>
+        </div>
+        <div class="hint">
+          Leer lassen für Auto-Discovery: alle <code>sensor.*</code> mit
+          <code>device_class: battery</code> werden überwacht.
+        </div>
+        <div class="row tall" style="margin-top: 14px">
+          <label>Manuell wählen (optional)</label>
+          <lw-entity-multi
+            .hass=${this.hass}
+            .value=${ev.battery_entities ?? []}
+            .domains=${["sensor"]}
+            @change=${(e2) => setEv("battery_entities", e2.detail.value)}
+          ></lw-entity-multi>
+        </div>
+      </div>
+    `;
+  }
+  // ---------- Tab: Radios ----------
+  _renderRadios() {
+    const radios = this.config.overview.radios ?? [];
+    const update = (i2, patch) => {
+      const list = [...radios];
+      list[i2] = { ...list[i2], ...patch };
+      this._patchOverview("radios", list);
+    };
+    const add = () => {
+      this._patchOverview("radios", [...radios, { name: "Neuer Sender", url: "" }]);
+    };
+    const remove = (i2) => {
+      const list = [...radios];
+      list.splice(i2, 1);
+      this._patchOverview("radios", list);
+    };
+    return b`
+      <div class="card">
+        <h3>Radio-Sender</h3>
+        <div class="hint" style="margin-bottom:14px; grid-column:1">
+          Klick auf eine Kachel im Musicplayer ruft <code>media_player.play_media</code> mit der
+          Stream-URL auf. MP3/AAC Streams funktionieren mit den meisten Playern. Sonos akzeptiert
+          auch <code>x-rincon-mp3radio://…</code> URLs.
+        </div>
+        ${radios.map(
+      (r2, i2) => b`
+            <div class="radio-row">
+              <lw-text-input
+                .value=${r2.name}
+                placeholder="Sendername"
+                @change=${(e2) => update(i2, { name: e2.detail.value })}
+              ></lw-text-input>
+              <lw-text-input
+                type="url"
+                .value=${r2.url}
+                placeholder="https://stream…"
+                @change=${(e2) => update(i2, { url: e2.detail.value })}
+              ></lw-text-input>
+              <lw-text-input
+                type="url"
+                .value=${r2.logo ?? ""}
+                placeholder="Logo-URL (optional)"
+                @change=${(e2) => update(i2, { logo: e2.detail.value || void 0 })}
+              ></lw-text-input>
+              <button class="del-btn" @click=${() => remove(i2)}>×</button>
+            </div>
+          `
+    )}
+        <button class="add-btn" @click=${add} style="margin-top:12px">
+          <lw-icon name="plus" .size=${13} .stroke=${2}></lw-icon>Sender hinzufügen
+        </button>
+      </div>
+    `;
+  }
+  // ---------- Tab: Rooms ----------
+  _renderRooms() {
+    const rooms = Object.entries(this.config.rooms);
+    return b`
+      ${rooms.length === 0 ? b`<div class="card" style="text-align:center; color:var(--text-muted)">
+            Noch keine Räume angelegt. Klick unten auf „Raum hinzufügen".
+          </div>` : ""}
+      ${rooms.map(([key, r2]) => this._renderRoomCard(key, r2))}
+      <button class="add-btn" @click=${this._addRoom}>
+        <lw-icon name="plus" .size=${14} .stroke=${2}></lw-icon>Raum hinzufügen
+      </button>
+    `;
+  }
+  _renderRoomCard(key, r2) {
+    const expanded = this._expandedRoom === key;
+    const counts = `${r2.lights?.length ?? 0}L · ${r2.scenes?.length ?? 0}S · ${r2.covers?.length ?? 0}R · ${r2.extras?.length ?? 0}G`;
+    return b`
+      <div class="room-card">
+        <div
+          class="room-head"
+          @click=${() => this._expandedRoom = expanded ? null : key}
+        >
+          <div class="room-ico">
+            <lw-icon name=${r2.icon ?? "cog"} .size=${17}></lw-icon>
+          </div>
+          <div class="room-name">${r2.name}</div>
+          <div class="room-count">${counts}</div>
+          <lw-icon name=${expanded ? "arrow-up" : "arrow-down"} .size=${14}></lw-icon>
+        </div>
+        ${expanded ? this._renderRoomBody(key, r2) : ""}
+      </div>
+    `;
+  }
+  _renderRoomBody(key, r2) {
+    const extras = r2.extras ?? [];
+    const updateExtra = (i2, patch) => {
+      const list = [...extras];
+      list[i2] = { ...list[i2], ...patch };
+      this._patchRoom(key, { extras: list });
+    };
+    const addExtra = () => {
+      this._patchRoom(key, { extras: [...extras, { kind: "generic", name: "Neues Gerät" }] });
+    };
+    const removeExtra = (i2) => {
+      const list = [...extras];
+      list.splice(i2, 1);
+      this._patchRoom(key, { extras: list });
+    };
+    return b`
+      <div class="room-body">
+        <div class="row" style="margin-top:14px">
+          <label>Anzeigename</label>
+          <lw-text-input
+            .value=${r2.name}
+            @change=${(e2) => this._patchRoom(key, { name: e2.detail.value })}
+          ></lw-text-input>
+        </div>
+        <div class="row tall">
+          <label>Icon</label>
+          <div class="icon-grid">
+            ${ROOM_ICONS.map(
+      (i2) => b`
+                <button
+                  class=${"icon-pick" + (r2.icon === i2 ? " active" : "")}
+                  @click=${() => this._patchRoom(key, { icon: i2 })}
+                  title=${i2}
+                >
+                  <lw-icon name=${i2} .size=${16}></lw-icon>
+                </button>
+              `
+    )}
+          </div>
+        </div>
+        <div class="row">
+          <label>Climate-Entity</label>
+          <lw-entity-picker
+            .hass=${this.hass}
+            .domains=${["climate"]}
+            .value=${r2.climate ?? ""}
+            @change=${(e2) => this._patchRoom(key, { climate: e2.detail.value || void 0 })}
+          ></lw-entity-picker>
+        </div>
+        <div class="row">
+          <label>Media-Player</label>
+          <lw-entity-picker
+            .hass=${this.hass}
+            .domains=${["media_player"]}
+            .value=${r2.media_player ?? ""}
+            @change=${(e2) => this._patchRoom(key, { media_player: e2.detail.value || void 0 })}
+          ></lw-entity-picker>
+        </div>
+        <div class="row tall">
+          <label>Szenen (1-5)</label>
+          <lw-entity-multi
+            .hass=${this.hass}
+            .value=${r2.scenes ?? []}
+            .domains=${["scene"]}
+            @change=${(e2) => this._patchRoom(key, { scenes: e2.detail.value })}
+          ></lw-entity-multi>
+        </div>
+        <div class="row tall">
+          <label>Lichter (Popup-Steuerung)</label>
+          <lw-entity-multi
+            .hass=${this.hass}
+            .value=${r2.lights ?? []}
+            .domains=${["light"]}
+            @change=${(e2) => this._patchRoom(key, { lights: e2.detail.value })}
+          ></lw-entity-multi>
+        </div>
+        <div class="row tall">
+          <label>Rollläden / Gardinen</label>
+          <lw-entity-multi
+            .hass=${this.hass}
+            .value=${r2.covers ?? []}
+            .domains=${["cover"]}
+            @change=${(e2) => this._patchRoom(key, { covers: e2.detail.value })}
+          ></lw-entity-multi>
+        </div>
+
+        <h3 style="margin-top:24px">Geräte in diesem Raum</h3>
+        ${extras.length > 0 ? b`
+              <div class="extra-cols">
+                <div>Typ</div>
+                <div>Anzeigename</div>
+                <div>Haupt-Entity</div>
+                <div>Status-Entity (opt.)</div>
+                <div></div>
+              </div>
+              ${extras.map(
+      (x2, i2) => b`
+                  <div class="extra-row">
+                    <select
+                      .value=${x2.kind}
+                      @change=${(e2) => updateExtra(i2, { kind: e2.target.value })}
+                    >
+                      ${EXTRA_KINDS.map(
+        (k2) => b`<option value=${k2.id} ?selected=${x2.kind === k2.id}>${k2.label}</option>`
+      )}
+                    </select>
+                    <lw-text-input
+                      .value=${x2.name}
+                      placeholder="Name"
+                      @change=${(e2) => updateExtra(i2, { name: e2.detail.value })}
+                    ></lw-text-input>
+                    <lw-entity-picker
+                      .hass=${this.hass}
+                      .value=${x2.entity ?? ""}
+                      placeholder="entity_id"
+                      @change=${(e2) => updateExtra(i2, { entity: e2.detail.value || void 0 })}
+                    ></lw-entity-picker>
+                    <lw-entity-picker
+                      .hass=${this.hass}
+                      .value=${x2.state_entity ?? ""}
+                      placeholder="optional"
+                      @change=${(e2) => updateExtra(i2, { state_entity: e2.detail.value || void 0 })}
+                    ></lw-entity-picker>
+                    <button class="del-btn" @click=${() => removeExtra(i2)}>×</button>
+                  </div>
+                `
+    )}
+            ` : ""}
+        <button class="add-btn" @click=${addExtra} style="margin-top:12px">
+          <lw-icon name="plus" .size=${13} .stroke=${2}></lw-icon>Gerät hinzufügen
+        </button>
+
+        <div style="display:flex; justify-content:flex-end; margin-top:18px">
+          <button class="del-btn" @click=${() => this._deleteRoom(key)}>
+            Raum löschen
+          </button>
+        </div>
+      </div>
+    `;
+  }
+  _renderTab() {
+    switch (this._tab) {
+      case "allgemein":
+        return this._renderGeneral();
+      case "overview":
+        return this._renderOverview();
+      case "energie":
+        return this._renderEnergy();
+      case "events":
+        return this._renderEvents();
+      case "radios":
+        return this._renderRadios();
+      case "rooms":
+        return this._renderRooms();
+    }
+  }
+  render() {
+    return b`
+      <div class="page">
+        <div class="head">
+          <div>
+            <div class="title">Einstellungen</div>
+            <div class="subtitle">
+              Änderungen werden automatisch gespeichert ·
+              <span class="save-indicator"><lw-icon name="check" .size=${11}></lw-icon>live sync</span>
+            </div>
+          </div>
+          <button class="close" @click=${this._close}>
+            <lw-icon name="x" .size=${13} .stroke=${2}></lw-icon> Fertig
+          </button>
+        </div>
+
+        <div class="tabs">
+          ${[
+      ["allgemein", "Allgemein"],
+      ["overview", "Übersicht"],
+      ["energie", "Energie"],
+      ["events", "Ereignisse"],
+      ["radios", "Radio"],
+      ["rooms", "Räume"]
+    ].map(
+      ([id, label]) => b`
+              <button
+                class=${"tab " + (this._tab === id ? "active" : "")}
+                @click=${() => this._tab = id}
+              >
+                ${label}
+              </button>
+            `
+    )}
+        </div>
+
+        <div class="content">${this._renderTab()}</div>
+      </div>
+    `;
+  }
 };
-LwConfigHelper.styles = i$3`
+LwEditPage.styles = i$3`
     :host {
       display: block;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.4);
-      z-index: 100;
-      overflow: auto;
-      animation: fade 0.2s ease-out both;
+      height: 100%;
+      overflow: hidden;
     }
-    @keyframes fade {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
+    .page {
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: 100%;
     }
-    .sheet {
-      max-width: 720px;
-      margin: 40px auto;
-      background: var(--bg);
+    .head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .title {
+      font-size: 26px;
+      font-weight: 500;
+      letter-spacing: -0.025em;
+    }
+    .subtitle {
+      margin-top: 6px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+    .close {
+      background: transparent;
+      border: 1px solid var(--border);
       color: var(--text);
-      border-radius: 18px;
-      padding: 24px;
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .close:hover {
+      background: var(--card);
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--card-inset);
+      padding: 3px;
+      border-radius: 11px;
+      width: fit-content;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+    .tabs::-webkit-scrollbar {
+      height: 0;
+    }
+    .tab {
+      padding: 7px 14px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 12.5px;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab.active {
+      background: var(--card-elev);
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .content {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .content::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .card {
+      background: var(--card);
       border: 1px solid var(--border-soft);
-      box-shadow: var(--shadow-lg);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 14px;
     }
-    h2 {
-      margin: 0 0 4px;
-      font-size: 20px;
+    .card h3 {
+      margin: 0 0 14px;
+      font-size: 14px;
       font-weight: 500;
-      letter-spacing: -0.02em;
-    }
-    p.lead {
-      color: var(--text-muted);
-      font-size: 13px;
-      margin: 0 0 18px;
-    }
-    .section {
-      margin-top: 20px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border-soft);
-    }
-    .section h3 {
-      margin: 0 0 10px;
-      font-size: 13px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
+      letter-spacing: -0.005em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .row {
       display: grid;
-      grid-template-columns: 140px 1fr;
-      gap: 10px;
+      grid-template-columns: 180px 1fr;
+      gap: 12px;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     .row label {
       font-size: 12.5px;
       color: var(--text);
     }
-    input,
+    .row.tall {
+      align-items: start;
+    }
+    .row.tall label {
+      padding-top: 6px;
+    }
+    .hint {
+      font-size: 11px;
+      color: var(--text-faint);
+      margin-top: 4px;
+      grid-column: 2;
+    }
     select {
       width: 100%;
-      padding: 8px 10px;
-      background: var(--card);
+      padding: 8px 12px;
+      background: var(--card-inset);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 9px;
       color: var(--text);
       font: inherit;
       font-size: 13px;
     }
-    input:focus,
-    select:focus {
-      outline: none;
-      border-color: var(--accent);
+    .save-indicator {
+      font-size: 11.5px;
+      color: var(--accent);
+      font-family: 'Geist Mono', monospace;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
     .room-card {
       background: var(--card);
       border: 1px solid var(--border-soft);
-      border-radius: 12px;
-      padding: 12px;
-      margin-bottom: 8px;
+      border-radius: 14px;
+      margin-bottom: 10px;
+      overflow: hidden;
     }
     .room-head {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+      padding: 14px 16px;
       cursor: pointer;
+      user-select: none;
     }
-    .room-head .name {
+    .room-head:hover {
+      background: var(--card-inset);
+    }
+    .room-ico {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: var(--card-inset);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+    }
+    .room-name {
       flex: 1;
+      font-size: 14px;
       font-weight: 500;
-      font-size: 13.5px;
     }
-    .room-head .count {
+    .room-count {
       font-size: 11px;
       color: var(--text-muted);
       font-family: 'Geist Mono', monospace;
     }
     .room-body {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px dashed var(--border-soft);
+      padding: 0 16px 16px;
+      border-top: 1px solid var(--border-soft);
     }
-    .yaml {
-      margin-top: 24px;
-      padding: 16px;
-      background: var(--card-inset);
-      border-radius: 12px;
-      border: 1px solid var(--border-soft);
-    }
-    .yaml-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .yaml-head .title {
-      font-size: 12px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-    }
-    pre {
-      margin: 0;
-      font-family: 'Geist Mono', monospace;
-      font-size: 11.5px;
-      line-height: 1.5;
-      color: var(--text);
-      overflow: auto;
-      max-height: 240px;
-      white-space: pre;
-    }
-    .actions {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-      margin-top: 20px;
-    }
-    button.btn {
-      padding: 8px 14px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 8px;
-      font: inherit;
-      font-size: 13px;
-      cursor: pointer;
-    }
-    button.btn.primary {
-      background: var(--text);
-      color: var(--bg);
-      border-color: var(--text);
-    }
-    .add-room {
+    .add-btn {
       width: 100%;
-      padding: 8px;
+      padding: 12px;
       border: 1px dashed var(--border);
       background: transparent;
       color: var(--text-muted);
-      border-radius: 10px;
-      font-size: 12px;
+      border-radius: 11px;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .add-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .del-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--warn);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 11.5px;
       cursor: pointer;
     }
-    .note {
-      font-size: 11.5px;
+    .del-btn:hover {
+      background: color-mix(in oklab, var(--warn) 10%, transparent);
+    }
+    .icon-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .icon-pick {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: var(--card-inset);
+      border: 1.5px solid transparent;
       color: var(--text-muted);
-      margin-top: 8px;
-      line-height: 1.5;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .icon-pick:hover {
+      color: var(--text);
+    }
+    .icon-pick.active {
+      border-color: var(--accent);
+      color: var(--text);
+      background: color-mix(in oklab, var(--accent) 18%, var(--card-inset));
+    }
+    .extra-row {
+      display: grid;
+      grid-template-columns: 160px 1fr 1fr 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-top: 1px solid var(--border-soft);
+    }
+    .extra-row:first-child {
+      border-top: none;
+      padding-top: 12px;
+    }
+    .extra-cols {
+      display: grid;
+      grid-template-columns: 160px 1fr 1fr 1fr auto;
+      gap: 8px;
+      padding: 0 0 6px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 500;
+      color: var(--text-faint);
+    }
+    .radio-row {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-top: 1px solid var(--border-soft);
+    }
+    .radio-row:first-of-type {
+      border-top: none;
+      padding-top: 12px;
+    }
+    .appliance-row {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr 1.5fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-top: 1px solid var(--border-soft);
     }
   `;
 __decorateClass$1([
   n2({ attribute: false })
-], LwConfigHelper.prototype, "hass", 2);
+], LwEditPage.prototype, "hass", 2);
 __decorateClass$1([
   n2({ attribute: false })
-], LwConfigHelper.prototype, "config", 2);
+], LwEditPage.prototype, "config", 2);
 __decorateClass$1([
   r()
-], LwConfigHelper.prototype, "_draft", 2);
+], LwEditPage.prototype, "_tab", 2);
 __decorateClass$1([
   r()
-], LwConfigHelper.prototype, "_expandedRoom", 2);
-LwConfigHelper = __decorateClass$1([
-  t("lw-config-helper")
-], LwConfigHelper);
+], LwEditPage.prototype, "_expandedRoom", 2);
+LwEditPage = __decorateClass$1([
+  t("lw-edit-page")
+], LwEditPage);
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __decorateClass = (decorators, target, key, kind) => {
@@ -5371,14 +7830,25 @@ let LindenwegDashboard = class extends i {
     this.narrow = false;
     this._page = "overview";
     this._time = /* @__PURE__ */ new Date();
-    this._configOpen = false;
+    this._config = DEFAULT_CONFIG;
+    this._editMode = false;
     this._readPageFromHash = () => {
       const m2 = location.hash.match(/#\/([\w-]+)/);
-      if (m2) this._page = m2[1];
+      if (m2) {
+        if (m2[1] === "edit") this._editMode = true;
+        else this._page = m2[1];
+      }
     };
     this._navigate = (e2) => {
+      this._editMode = false;
       this._page = e2.detail.page;
       location.hash = `#/${e2.detail.page}`;
+    };
+    this._openEdit = () => {
+      this._editMode = true;
+    };
+    this._closeEdit = () => {
+      this._editMode = false;
     };
   }
   connectedCallback() {
@@ -5387,26 +7857,27 @@ let LindenwegDashboard = class extends i {
     this._tick = window.setInterval(() => this._time = /* @__PURE__ */ new Date(), 2e4);
     this._readPageFromHash();
     window.addEventListener("hashchange", this._readPageFromHash);
+    this._unsubConfig = configStore.subscribe((cfg) => {
+      this._config = cfg;
+    });
   }
   disconnectedCallback() {
     super.disconnectedCallback();
     if (this._tick) clearInterval(this._tick);
     window.removeEventListener("hashchange", this._readPageFromHash);
+    this._unsubConfig?.();
+    configStore.detach();
   }
-  _config() {
-    const fromPanel = this.panel?.config ?? {};
-    return {
-      ...DEFAULT_CONFIG,
-      ...fromPanel,
-      overview: { ...DEFAULT_CONFIG.overview, ...fromPanel.overview ?? {} },
-      rooms: fromPanel.rooms ?? {}
-    };
+  willUpdate(changed) {
+    if (changed.has("hass") && this.hass) {
+      configStore.attach(this.hass);
+    }
   }
   _theme() {
-    return this._config().theme === "walnut" ? "walnut" : "linen";
+    return this._config.theme === "walnut" ? "walnut" : "linen";
   }
   render() {
-    const config = this._config();
+    const config = this._config;
     const theme = this._theme();
     const room = config.rooms[this._page];
     return b`
@@ -5414,27 +7885,26 @@ let LindenwegDashboard = class extends i {
         <lw-sidebar
           .hass=${this.hass}
           .config=${config}
-          .page=${this._page}
+          .page=${this._editMode ? "__edit__" : this._page}
           @navigate=${this._navigate}
-          @open-config=${() => this._configOpen = true}
+          @open-config=${this._openEdit}
         ></lw-sidebar>
         <div class="main">
-          ${this._page === "overview" || !room ? b`<lw-overview-page
+          ${this._editMode ? b`<lw-edit-page
                 .hass=${this.hass}
                 .config=${config}
-                .time=${this._time}
-              ></lw-overview-page>` : b`<lw-room-page
-                .hass=${this.hass}
-                .config=${config}
-                .roomKey=${this._page}
-                .time=${this._time}
-              ></lw-room-page>`}
+                @close=${this._closeEdit}
+              ></lw-edit-page>` : this._page === "overview" || !room ? b`<lw-overview-page
+                  .hass=${this.hass}
+                  .config=${config}
+                  .time=${this._time}
+                ></lw-overview-page>` : b`<lw-room-page
+                  .hass=${this.hass}
+                  .config=${config}
+                  .roomKey=${this._page}
+                  .time=${this._time}
+                ></lw-room-page>`}
         </div>
-        ${this._configOpen ? b`<lw-config-helper
-              .hass=${this.hass}
-              .config=${config}
-              @close=${() => this._configOpen = false}
-            ></lw-config-helper>` : null}
       </div>
     `;
   }
@@ -5486,11 +7956,14 @@ __decorateClass([
 ], LindenwegDashboard.prototype, "_time", 2);
 __decorateClass([
   r()
-], LindenwegDashboard.prototype, "_configOpen", 2);
+], LindenwegDashboard.prototype, "_config", 2);
+__decorateClass([
+  r()
+], LindenwegDashboard.prototype, "_editMode", 2);
 LindenwegDashboard = __decorateClass([
   t("lindenweg-dashboard")
 ], LindenwegDashboard);
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 console.info(
   `%c LINDENWEG-DASHBOARD %c v${VERSION} `,
   "background:#7e8f70;color:#fbf7ee;padding:2px 6px;border-radius:4px 0 0 4px;font-weight:600",

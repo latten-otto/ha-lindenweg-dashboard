@@ -57,21 +57,27 @@ export class LwBlindsCard extends LitElement {
     }
     .btns {
       display: flex;
-      gap: 4px;
+      gap: 6px;
     }
     .btn {
-      width: 22px;
-      height: 22px;
-      border-radius: 6px;
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
       border: 1px solid var(--border);
       background: var(--card);
       color: var(--text-muted);
       display: grid;
       place-items: center;
       cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
     }
     .btn:hover {
       color: var(--text);
+      border-color: var(--border-strong);
+      background: var(--card-elev);
+    }
+    .btn:active {
+      transform: scale(0.95);
     }
     .empty {
       color: var(--text-muted);
@@ -133,11 +139,11 @@ export class LwBlindsCard extends LitElement {
                 <div class="pct">${pos}%</div>
                 <div class="name">${name}</div>
                 <div class="btns">
-                  <button class="btn" @click=${() => this._set(id, 100)}>
-                    <lw-icon name="arrow-up" .size=${11}></lw-icon>
+                  <button class="btn" title="Hoch" @click=${() => this._set(id, 100)}>
+                    <lw-icon name="arrow-up" .size=${16} .stroke=${2}></lw-icon>
                   </button>
-                  <button class="btn" @click=${() => this._set(id, 0)}>
-                    <lw-icon name="arrow-down" .size=${11}></lw-icon>
+                  <button class="btn" title="Runter" @click=${() => this._set(id, 0)}>
+                    <lw-icon name="arrow-down" .size=${16} .stroke=${2}></lw-icon>
                   </button>
                 </div>
               </div>
