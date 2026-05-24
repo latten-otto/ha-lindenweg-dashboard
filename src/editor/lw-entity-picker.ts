@@ -157,7 +157,9 @@ export class LwEntityPicker extends LitElement {
   }
 
   private _onClick = (e: MouseEvent) => {
-    if (!this.contains(e.target as Node)) {
+    // composedPath() traverses shadow DOM — needed because our menu lives in the shadow root.
+    const path = e.composedPath();
+    if (!path.includes(this)) {
       this._open = false;
     }
   };

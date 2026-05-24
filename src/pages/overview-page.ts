@@ -6,7 +6,7 @@ import { entityState, isOn } from '../hass/entity-helpers';
 import '../panel/lw-topbar';
 import '../modules/ov-weather';
 import '../modules/ov-energy';
-import '../modules/ov-security';
+import '../modules/ov-infos';
 import '../modules/ov-scenes';
 import '../modules/ov-media';
 import '../modules/ov-cameras';
@@ -33,11 +33,24 @@ export class LwOverviewPage extends LitElement {
       height: 100%;
       animation: rise 0.35s ease-out both;
     }
+
     .grid {
       flex: 1;
       display: grid;
       grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
-      grid-auto-rows: minmax(280px, auto);
+      /* Explicit row heights:
+         - Row 1 (energy/weather/infos): tall card row
+         - Row 2 (scenes):                content-sized so the row matches its own height,
+                                          not stretched to grid-auto-rows minimum
+         - Row 3 (media/cameras/calendar): medium card row
+         - Row 4 (events):                medium card row
+      */
+      grid-template-rows: minmax(340px, 1.2fr) min-content minmax(260px, 1fr) minmax(220px, auto);
+      grid-template-areas:
+        'energy weather infos'
+        'scenes scenes scenes'
+        'media cameras calendar'
+        'events events events';
       gap: 14px;
       min-height: 0;
       overflow: auto;
@@ -50,40 +63,38 @@ export class LwOverviewPage extends LitElement {
       background: var(--border);
       border-radius: 3px;
     }
-    .full {
-      grid-column: 1 / -1;
+
+    .a-energy { grid-area: energy; min-width: 0; }
+    .a-weather { grid-area: weather; min-width: 0; }
+    .a-infos { grid-area: infos; min-width: 0; }
+    .a-scenes { grid-area: scenes; min-width: 0; }
+    .a-media { grid-area: media; min-width: 0; }
+    .a-cameras { grid-area: cameras; min-width: 0; }
+    .a-calendar { grid-area: calendar; min-width: 0; }
+    .a-events { grid-area: events; min-width: 0; }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    .full > * {
-      display: block;
-      height: 100%;
-    }
+
     @media (max-width: 1280px) {
       .grid {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows: auto;
+        grid-template-areas:
+          'energy energy'
+          'weather infos'
+          'scenes scenes'
+          'media cameras'
+          'calendar events';
       }
     }
     @media (max-width: 760px) {
       .grid {
         grid-template-columns: minmax(0, 1fr);
-      }
-    }
-    @keyframes rise {
-      from {
-        opacity: 0;
-        transform: translateY(6px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    @media (max-width: 1100px) {
-      .grid {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto;
-      }
-      .full {
-        grid-column: 1 / -1;
+        grid-template-areas:
+          'energy' 'weather' 'infos' 'scenes' 'media' 'cameras' 'calendar' 'events';
       }
     }
   `;
@@ -102,8 +113,7 @@ export class LwOverviewPage extends LitElement {
   render() {
     const ov = this.config.overview ?? {};
     const totalOn = this._totalLightsOn();
-    const subtitle =
-      `${totalOn} Lichter an · ${Object.keys(this.config.rooms ?? {}).length} Räume`;
+    const subtitle = `${totalOn} Lichter an · ${Object.keys(this.config.rooms ?? {}).length} Räume`;
 
     return html`
       <div class="page">
@@ -115,25 +125,22 @@ export class LwOverviewPage extends LitElement {
         ></lw-topbar>
 
         <div class="grid">
-          <lw-energy-card .hass=${this.hass} .energy=${ov.energy ?? {}}></lw-energy-card>
-          <lw-weather-card .hass=${this.hass} .entity=${ov.weather}></lw-weather-card>
-          <lw-security-card .hass=${this.hass} .alarm=${ov.alarm_panel}></lw-security-card>
+          <lw-energy-card class="a-energy" .hass=${this.hass} .energy=${ov.energy ?? {}}></lw-energy-card>
+          <lw-weather-card class="a-weather" .hass=${this.hass} .entity=${ov.weather}></lw-weather-card>
+          <lw-infos-card class="a-infos" .hass=${this.hass} .config=${this.config}></lw-infos-card>
 
-          <div class="full">
-            <lw-scenes-row .hass=${this.hass} .scenes=${ov.scenes ?? []}></lw-scenes-row>
-          </div>
+          <lw-scenes-row class="a-scenes" .hass=${this.hass} .scenes=${ov.scenes ?? []}></lw-scenes-row>
 
-          <lw-media-card .hass=${this.hass} .config=${this.config}></lw-media-card>
+          <lw-media-card class="a-media" .hass=${this.hass} .config=${this.config}></lw-media-card>
           <lw-cameras-card
+            class="a-cameras"
             .hass=${this.hass}
             .cameras=${ov.cameras ?? []}
             .cameraMotion=${ov.camera_motion ?? {}}
           ></lw-cameras-card>
-          <lw-calendar-card .hass=${this.hass} .entity=${ov.calendar}></lw-calendar-card>
+          <lw-calendar-card class="a-calendar" .hass=${this.hass} .entity=${ov.calendar}></lw-calendar-card>
 
-          <div class="full">
-            <lw-events-card .hass=${this.hass} .events=${ov.events ?? {}}></lw-events-card>
-          </div>
+          <lw-events-card class="a-events" .hass=${this.hass} .events=${ov.events ?? {}}></lw-events-card>
         </div>
       </div>
     `;

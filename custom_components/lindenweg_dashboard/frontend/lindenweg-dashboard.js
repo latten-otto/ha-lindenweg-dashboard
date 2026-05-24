@@ -2205,101 +2205,316 @@ var __decorateClass$s = (decorators, target, key, kind) => {
   if (kind && result) __defProp$s(target, key, result);
   return result;
 };
-let LwSecurityCard = class extends i {
-  _setMode(mode) {
-    if (!this.hass || !this.alarm) return;
-    if (mode === "off")
-      void this.hass.callService("alarm_control_panel", "alarm_disarm", {}, { entity_id: this.alarm });
-    else if (mode === "home")
-      void this.hass.callService("alarm_control_panel", "alarm_arm_home", {}, { entity_id: this.alarm });
-    else
-      void this.hass.callService("alarm_control_panel", "alarm_arm_away", {}, { entity_id: this.alarm });
+const ACTIVE_STATES = /* @__PURE__ */ new Set([
+  "running",
+  "in_use",
+  "active",
+  "cleaning",
+  "mowing",
+  "on",
+  "returning",
+  "paused",
+  "rinse_hold",
+  "autocleaning",
+  "super_cooling",
+  "super_freezing",
+  "super_heating",
+  "spinning",
+  "washing",
+  "drying",
+  "rinsing",
+  "finishing"
+]);
+const ERROR_STATES = /* @__PURE__ */ new Set(["error", "failure", "failed", "fault"]);
+const APPLIANCE_ICON$1 = {
+  dishwasher: "water",
+  geschirr: "water",
+  washer: "washer",
+  wasch: "washer",
+  dryer: "fan",
+  trockner: "fan",
+  oven: "oven",
+  backofen: "oven"
+};
+let LwInfosCard = class extends i {
+  constructor() {
+    super(...arguments);
+    this._wasteToday = [];
+    this._lastWasteFetch = 0;
   }
-  _currentMode() {
-    const e2 = entityState(this.hass, this.alarm);
+  updated() {
+    if (!this.hass) return;
+    const cal = this.config?.overview?.events?.waste_calendar;
+    if (!cal) return;
+    if (Date.now() - this._lastWasteFetch < 30 * 60 * 1e3) return;
+    this._lastWasteFetch = Date.now();
+    void this._fetchWasteToday();
+  }
+  async _fetchWasteToday() {
+    if (!this.hass) return;
+    const cal = this.config?.overview?.events?.waste_calendar;
+    if (!cal) return;
+    const start = /* @__PURE__ */ new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(23, 59, 59);
+    try {
+      const evs = await this.hass.callApi(
+        "GET",
+        `calendars/${cal}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
+      );
+      this._wasteToday = Array.isArray(evs) ? evs : [];
+    } catch {
+      this._wasteToday = [];
+    }
+  }
+  // ---- Alarm ----
+  _alarmMode() {
+    const e2 = entityState(this.hass, this.config?.overview?.alarm_panel);
     if (!e2) return "off";
     if (e2.state === "armed_home") return "home";
     if (e2.state === "armed_away") return "away";
     return "off";
   }
+  _setAlarmMode(mode) {
+    if (!this.hass) return;
+    const e2 = this.config?.overview?.alarm_panel;
+    if (!e2) return;
+    if (mode === "off")
+      void this.hass.callService("alarm_control_panel", "alarm_disarm", {}, { entity_id: e2 });
+    else if (mode === "home")
+      void this.hass.callService("alarm_control_panel", "alarm_arm_home", {}, { entity_id: e2 });
+    else
+      void this.hass.callService("alarm_control_panel", "alarm_arm_away", {}, { entity_id: e2 });
+  }
+  // ---- Discoveries ----
+  _runningAppliances() {
+    const list = this.config?.overview?.events?.appliances ?? [];
+    const out = [];
+    list.forEach((a2) => {
+      const stE = entityState(this.hass, a2.state_entity);
+      if (!stE) return;
+      const state2 = stE.state ?? "";
+      if (!ACTIVE_STATES.has(state2.toLowerCase())) return;
+      const progE = entityState(this.hass, a2.progress_entity);
+      let progress = progE ? parseFloat(progE.state) : NaN;
+      if (!Number.isFinite(progress)) progress = attrNum(stE, "progress", NaN);
+      const remE = entityState(this.hass, a2.remaining_entity);
+      let remaining = remE?.state ?? "";
+      if (!remaining) {
+        const mins = attrNum(stE, "remaining_time", NaN);
+        if (Number.isFinite(mins)) remaining = `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`;
+      }
+      const n3 = (a2.name || "").toLowerCase();
+      let icon = a2.icon ?? "cog";
+      if (!a2.icon) {
+        for (const [k2, v2] of Object.entries(APPLIANCE_ICON$1)) {
+          if (n3.includes(k2)) {
+            icon = v2;
+            break;
+          }
+        }
+      }
+      out.push({ a: a2, state: state2, progress: Number.isFinite(progress) ? progress : 0, remaining, icon });
+    });
+    return out;
+  }
+  _allExtras() {
+    const rooms = this.config?.rooms ?? {};
+    const out = [];
+    Object.values(rooms).forEach((r2) => {
+      (r2.extras ?? []).forEach((x2) => out.push(x2));
+    });
+    return out;
+  }
+  _erroringDevices() {
+    const out = [];
+    this._allExtras().forEach((x2) => {
+      if (!["vacuum", "mower", "irrigation"].includes(x2.kind)) return;
+      if (!x2.entity) return;
+      const e2 = entityState(this.hass, x2.entity);
+      if (!e2) return;
+      const s2 = e2.state.toLowerCase();
+      const isError = ERROR_STATES.has(s2) || e2.attributes.error && e2.attributes.error !== "none";
+      if (isError) out.push({ extra: x2, e: e2 });
+    });
+    return out;
+  }
+  _stateLabel(s2) {
+    const map = {
+      running: "läuft",
+      cleaning: "reinigt",
+      mowing: "mäht",
+      paused: "pausiert",
+      drying: "trocknet",
+      washing: "wäscht",
+      rinsing: "spült",
+      spinning: "schleudert",
+      in_use: "läuft",
+      finished: "fertig",
+      finishing: "beendet",
+      programmed: "programmiert",
+      docked: "lädt",
+      idle: "bereit",
+      returning: "fährt zurück",
+      end_programmed: "beendet"
+    };
+    return map[s2.toLowerCase()] ?? s2;
+  }
+  // ---- Status rows ----
   _doorsLocks() {
     const states = this.hass?.states ?? {};
     const locks = Object.values(states).filter((s2) => s2.entity_id.startsWith("lock."));
-    const locked = locks.filter((s2) => s2.state === "locked").length;
-    return { locked, total: locks.length };
+    return {
+      locked: locks.filter((s2) => s2.state === "locked").length,
+      total: locks.length
+    };
   }
   _windows() {
     const states = this.hass?.states ?? {};
-    const windows = Object.values(states).filter(
+    const w2 = Object.values(states).filter(
       (s2) => s2.entity_id.startsWith("binary_sensor.") && (s2.attributes.device_class === "window" || s2.attributes.device_class === "door")
     );
-    const open = windows.filter((s2) => isOn(s2.state)).length;
-    return { open, total: windows.length };
+    return { open: w2.filter((s2) => isOn(s2.state)).length, total: w2.length };
   }
   render() {
-    const mode = this._currentMode();
+    const mode = this._alarmMode();
+    const hasAlarm = !!this.config?.overview?.alarm_panel;
     const doors = this._doorsLocks();
     const wins = this._windows();
     const allOk = doors.locked === doors.total && wins.open === 0;
+    const apps = this._runningAppliances();
+    const errors = this._erroringDevices();
+    const waste = this._wasteToday;
+    const hasAny = apps.length > 0 || errors.length > 0 || waste.length > 0;
     return b`
       <div class="card">
-        <lw-section-head sub="Status" heading="Sicherheit">
-          <span slot="right">
-            <lw-pill color=${allOk ? "var(--accent)" : "var(--warn)"} .soft=${true}>
-              ● ${allOk ? "Alles sicher" : "Hinweis"}
-            </lw-pill>
-          </span>
+        <lw-section-head sub="Status" heading="Infos">
+          ${hasAlarm ? b`<lw-pill
+                slot="right"
+                color=${allOk && mode !== "off" ? "var(--accent)" : errors.length ? "var(--warn)" : "var(--amber)"}
+                .soft=${true}
+              >
+                ● ${errors.length > 0 ? `${errors.length} Fehler` : allOk && mode !== "off" ? "Alles ok" : "Hinweis"}
+              </lw-pill>` : ""}
         </lw-section-head>
 
-        <div class="modes">
-          ${[
+        ${hasAlarm ? b`
+              <div class="alarm-modes">
+                ${[
       { id: "home", name: "Daheim", icon: "home" },
       { id: "away", name: "Unterwegs", icon: "arrow-right" },
       { id: "off", name: "Aus", icon: "x" }
     ].map(
       (m2) => b`
-              <button class=${"mode " + (mode === m2.id ? "active" : "")} @click=${() => this._setMode(m2.id)}>
-                <lw-icon name=${m2.icon} .size=${13}></lw-icon>${m2.name}
-              </button>
-            `
+                    <button
+                      class=${"alarm-mode " + (mode === m2.id ? "active" : "")}
+                      @click=${() => this._setAlarmMode(m2.id)}
+                    >
+                      <lw-icon name=${m2.icon} .size=${13}></lw-icon>${m2.name}
+                    </button>
+                  `
     )}
-        </div>
+              </div>
+            ` : ""}
 
-        <div class="rows">
-          <div class="row">
-            <div class="icon-bg ${doors.total === 0 || doors.locked === doors.total ? "ok" : "warn"}">
-              <lw-icon name="lock" .size=${13}></lw-icon>
-            </div>
-            <div class="label">${doors.total === 0 ? "Keine Schlösser" : "Alle Türen verriegelt"}</div>
-            <div class="val">${doors.locked}/${doors.total}</div>
-          </div>
-          <div class="row">
-            <div class="icon-bg ${wins.open === 0 ? "ok" : "warn"}">
-              <lw-icon name="blinds" .size=${13}></lw-icon>
-            </div>
-            <div class="label">
-              ${wins.open === 0 ? "Alle Fenster zu" : `${wins.open} Fenster offen`}
-            </div>
-            <div class="val">${wins.total - wins.open}/${wins.total}</div>
-          </div>
-          <div class="row">
-            <div class="icon-bg ok"><lw-icon name="bell" .size=${13}></lw-icon></div>
-            <div class="label">Rauchmelder aktiv</div>
-            <div class="val">—</div>
-          </div>
-          <div class="row">
-            <div class="icon-bg ${mode !== "off" ? "ok" : "warn"}">
-              <lw-icon name="shield-check" .size=${13}></lw-icon>
-            </div>
-            <div class="label">Alarmanlage</div>
-            <div class="val">${mode === "off" ? "Aus" : "Scharf"}</div>
-          </div>
+        <div class="list">
+          ${errors.length ? b`
+                <div class="header-tag">Fehler</div>
+                ${errors.map(
+      ({ extra, e: e2 }) => b`
+                    <div class="row warn">
+                      <div class="ico error">
+                        <lw-icon
+                          name=${extra.kind === "vacuum" ? "vacuum" : extra.kind === "mower" ? "leaf" : "water"}
+                          .size=${14}
+                        ></lw-icon>
+                      </div>
+                      <div class="body">
+                        <div class="name">${extra.name || friendlyName(e2, extra.entity)}</div>
+                        <div class="sub">
+                          ${e2.attributes.error || this._stateLabel(e2.state)}
+                        </div>
+                      </div>
+                    </div>
+                  `
+    )}
+              ` : A}
+          ${apps.length ? b`
+                <div class="header-tag">Läuft gerade</div>
+                ${apps.map(
+      ({ a: a2, state: state2, progress, remaining, icon }) => b`
+                    <div class="row active">
+                      <div class="ico appliance active">
+                        <lw-icon name=${icon} .size=${14}></lw-icon>
+                      </div>
+                      <div class="body">
+                        <div class="name">${a2.name}</div>
+                        <div class="sub">
+                          ${this._stateLabel(state2)}${remaining ? ` · noch ${remaining}` : ""}
+                        </div>
+                        ${progress > 0 ? b`<div class="progress">
+                              <div class="bar" style=${`width:${Math.min(100, progress)}%`}></div>
+                            </div>` : A}
+                      </div>
+                      ${progress > 0 ? b`<div class="val">${Math.round(progress)}%</div>` : A}
+                    </div>
+                  `
+    )}
+              ` : A}
+          ${waste.length ? b`
+                <div class="header-tag">Abholung heute</div>
+                ${waste.map(
+      (w2) => b`
+                    <div class="row">
+                      <div class="ico waste"><lw-icon name="package" .size=${14}></lw-icon></div>
+                      <div class="body">
+                        <div class="name">${w2.summary}</div>
+                        <div class="sub">heute</div>
+                      </div>
+                    </div>
+                  `
+    )}
+              ` : A}
+          ${hasAlarm || doors.total > 0 || wins.total > 0 ? b`
+                <div class="row status">
+                  <div class=${"ico " + (doors.locked === doors.total || doors.total === 0 ? "ok" : "warn")}>
+                    <lw-icon name="lock" .size=${13}></lw-icon>
+                  </div>
+                  <div class="body">
+                    <div class="name">
+                      ${doors.total === 0 ? "Keine Schlösser" : "Türen"}
+                    </div>
+                  </div>
+                  <div class="val">${doors.locked}/${doors.total}</div>
+                </div>
+                <div class="row status">
+                  <div class=${"ico " + (wins.open === 0 ? "ok" : "warn")}>
+                    <lw-icon name="blinds" .size=${13}></lw-icon>
+                  </div>
+                  <div class="body">
+                    <div class="name">
+                      ${wins.open === 0 ? "Alle Fenster zu" : `${wins.open} Fenster offen`}
+                    </div>
+                  </div>
+                  <div class="val">${wins.total - wins.open}/${wins.total}</div>
+                </div>
+                ${hasAlarm ? b`<div class="row status">
+                      <div class=${"ico " + (mode !== "off" ? "ok" : "warn")}>
+                        <lw-icon name="shield-check" .size=${13}></lw-icon>
+                      </div>
+                      <div class="body">
+                        <div class="name">Alarmanlage</div>
+                      </div>
+                      <div class="val">${mode === "off" ? "Aus" : "Scharf"}</div>
+                    </div>` : A}
+              ` : !hasAny ? b`<div class="empty">Alles ruhig</div>` : A}
         </div>
       </div>
     `;
   }
 };
-LwSecurityCard.styles = i$3`
+LwInfosCard.styles = i$3`
     :host {
       display: block;
       height: 100%;
@@ -2313,15 +2528,16 @@ LwSecurityCard.styles = i$3`
       flex-direction: column;
       height: 100%;
       min-width: 0;
+      gap: 12px;
     }
-    .modes {
+    .alarm-modes {
       display: flex;
       gap: 3px;
       padding: 3px;
       background: var(--card-inset);
       border-radius: 11px;
     }
-    .mode {
+    .alarm-mode {
       flex: 1;
       display: flex;
       align-items: center;
@@ -2332,65 +2548,143 @@ LwSecurityCard.styles = i$3`
       border: none;
       background: transparent;
       color: var(--text-muted);
+      font: inherit;
       font-size: 12px;
       font-weight: 500;
+      cursor: pointer;
     }
-    .mode.active {
+    .alarm-mode.active {
       background: var(--card-elev);
       color: var(--text);
       box-shadow: var(--shadow-sm);
     }
-    .rows {
+    .list {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      margin-top: 12px;
-      flex: 1;
+      gap: 6px;
+    }
+    .list::-webkit-scrollbar {
+      width: 0;
+    }
+    .empty {
+      color: var(--text-muted);
+      font-size: 12.5px;
+      padding: 16px 0;
+      text-align: center;
+    }
+    .header-tag {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-faint);
+      padding: 6px 4px 2px;
     }
     .row {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 8px 4px;
-      border-top: 1px solid var(--border-soft);
+      padding: 9px 10px;
+      border-radius: 11px;
+      border: 1px solid var(--border-soft);
+      background: var(--card-inset);
     }
-    .icon-bg {
-      width: 26px;
-      height: 26px;
-      border-radius: 7px;
+    .row.active {
+      border-color: color-mix(in oklab, var(--accent) 35%, var(--border-soft));
+      background: color-mix(in oklab, var(--accent) 8%, var(--card-inset));
+    }
+    .row.warn {
+      border-color: color-mix(in oklab, var(--warn) 40%, var(--border-soft));
+      background: color-mix(in oklab, var(--warn) 10%, var(--card-inset));
+    }
+    .row.status {
+      background: transparent;
+      border: none;
+      border-top: 1px solid var(--border-soft);
+      border-radius: 0;
+      padding: 8px 4px;
+    }
+    .ico {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--text-muted);
       display: grid;
       place-items: center;
       flex-shrink: 0;
     }
-    .icon-bg.ok {
+    .ico.appliance.active {
+      background: var(--accent);
+      color: white;
+    }
+    .ico.error {
+      background: var(--warn);
+      color: white;
+    }
+    .ico.waste {
+      background: color-mix(in oklab, var(--amber) 25%, transparent);
+      color: var(--amber);
+    }
+    .ico.ok {
       background: color-mix(in oklab, var(--accent) 14%, transparent);
       color: var(--accent);
     }
-    .icon-bg.warn {
-      background: color-mix(in oklab, var(--warn) 14%, transparent);
-      color: var(--warn);
-    }
-    .label {
+    .body {
       flex: 1;
       min-width: 0;
+    }
+    .name {
       font-size: 12.5px;
       font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .sub {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+    .row.warn .sub {
+      color: var(--warn);
+    }
+    .progress {
+      margin-top: 5px;
+      height: 4px;
+      background: var(--card);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress .bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.4s ease-out;
     }
     .val {
       font-family: 'Geist Mono', monospace;
       font-size: 11px;
       color: var(--text-muted);
+      min-width: 36px;
+      text-align: right;
     }
   `;
 __decorateClass$s([
   n2({ attribute: false })
-], LwSecurityCard.prototype, "hass", 2);
+], LwInfosCard.prototype, "hass", 2);
 __decorateClass$s([
-  n2({ type: String })
-], LwSecurityCard.prototype, "alarm", 2);
-LwSecurityCard = __decorateClass$s([
-  t("lw-security-card")
-], LwSecurityCard);
+  n2({ attribute: false })
+], LwInfosCard.prototype, "config", 2);
+__decorateClass$s([
+  r()
+], LwInfosCard.prototype, "_wasteToday", 2);
+LwInfosCard = __decorateClass$s([
+  t("lw-infos-card")
+], LwInfosCard);
 var __defProp$r = Object.defineProperty;
 var __getOwnPropDesc$r = Object.getOwnPropertyDescriptor;
 var __decorateClass$r = (decorators, target, key, kind) => {
@@ -3909,25 +4203,22 @@ let LwOverviewPage = class extends i {
         ></lw-topbar>
 
         <div class="grid">
-          <lw-energy-card .hass=${this.hass} .energy=${ov.energy ?? {}}></lw-energy-card>
-          <lw-weather-card .hass=${this.hass} .entity=${ov.weather}></lw-weather-card>
-          <lw-security-card .hass=${this.hass} .alarm=${ov.alarm_panel}></lw-security-card>
+          <lw-energy-card class="a-energy" .hass=${this.hass} .energy=${ov.energy ?? {}}></lw-energy-card>
+          <lw-weather-card class="a-weather" .hass=${this.hass} .entity=${ov.weather}></lw-weather-card>
+          <lw-infos-card class="a-infos" .hass=${this.hass} .config=${this.config}></lw-infos-card>
 
-          <div class="full">
-            <lw-scenes-row .hass=${this.hass} .scenes=${ov.scenes ?? []}></lw-scenes-row>
-          </div>
+          <lw-scenes-row class="a-scenes" .hass=${this.hass} .scenes=${ov.scenes ?? []}></lw-scenes-row>
 
-          <lw-media-card .hass=${this.hass} .config=${this.config}></lw-media-card>
+          <lw-media-card class="a-media" .hass=${this.hass} .config=${this.config}></lw-media-card>
           <lw-cameras-card
+            class="a-cameras"
             .hass=${this.hass}
             .cameras=${ov.cameras ?? []}
             .cameraMotion=${ov.camera_motion ?? {}}
           ></lw-cameras-card>
-          <lw-calendar-card .hass=${this.hass} .entity=${ov.calendar}></lw-calendar-card>
+          <lw-calendar-card class="a-calendar" .hass=${this.hass} .entity=${ov.calendar}></lw-calendar-card>
 
-          <div class="full">
-            <lw-events-card .hass=${this.hass} .events=${ov.events ?? {}}></lw-events-card>
-          </div>
+          <lw-events-card class="a-events" .hass=${this.hass} .events=${ov.events ?? {}}></lw-events-card>
         </div>
       </div>
     `;
@@ -3947,11 +4238,24 @@ LwOverviewPage.styles = i$3`
       height: 100%;
       animation: rise 0.35s ease-out both;
     }
+
     .grid {
       flex: 1;
       display: grid;
       grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
-      grid-auto-rows: minmax(280px, auto);
+      /* Explicit row heights:
+         - Row 1 (energy/weather/infos): tall card row
+         - Row 2 (scenes):                content-sized so the row matches its own height,
+                                          not stretched to grid-auto-rows minimum
+         - Row 3 (media/cameras/calendar): medium card row
+         - Row 4 (events):                medium card row
+      */
+      grid-template-rows: minmax(340px, 1.2fr) min-content minmax(260px, 1fr) minmax(220px, auto);
+      grid-template-areas:
+        'energy weather infos'
+        'scenes scenes scenes'
+        'media cameras calendar'
+        'events events events';
       gap: 14px;
       min-height: 0;
       overflow: auto;
@@ -3964,40 +4268,38 @@ LwOverviewPage.styles = i$3`
       background: var(--border);
       border-radius: 3px;
     }
-    .full {
-      grid-column: 1 / -1;
+
+    .a-energy { grid-area: energy; min-width: 0; }
+    .a-weather { grid-area: weather; min-width: 0; }
+    .a-infos { grid-area: infos; min-width: 0; }
+    .a-scenes { grid-area: scenes; min-width: 0; }
+    .a-media { grid-area: media; min-width: 0; }
+    .a-cameras { grid-area: cameras; min-width: 0; }
+    .a-calendar { grid-area: calendar; min-width: 0; }
+    .a-events { grid-area: events; min-width: 0; }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    .full > * {
-      display: block;
-      height: 100%;
-    }
+
     @media (max-width: 1280px) {
       .grid {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows: auto;
+        grid-template-areas:
+          'energy energy'
+          'weather infos'
+          'scenes scenes'
+          'media cameras'
+          'calendar events';
       }
     }
     @media (max-width: 760px) {
       .grid {
         grid-template-columns: minmax(0, 1fr);
-      }
-    }
-    @keyframes rise {
-      from {
-        opacity: 0;
-        transform: translateY(6px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    @media (max-width: 1100px) {
-      .grid {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto;
-      }
-      .full {
-        grid-column: 1 / -1;
+        grid-template-areas:
+          'energy' 'weather' 'infos' 'scenes' 'media' 'cameras' 'calendar' 'events';
       }
     }
   `;
@@ -6533,7 +6835,8 @@ let LwEntityPicker = class extends i {
     this._open = false;
     this._filter = "";
     this._onClick = (e2) => {
-      if (!this.contains(e2.target)) {
+      const path = e2.composedPath();
+      if (!path.includes(this)) {
         this._open = false;
       }
     };
@@ -7963,7 +8266,7 @@ __decorateClass([
 LindenwegDashboard = __decorateClass([
   t("lindenweg-dashboard")
 ], LindenwegDashboard);
-const VERSION = "0.2.0";
+const VERSION = "0.2.1";
 console.info(
   `%c LINDENWEG-DASHBOARD %c v${VERSION} `,
   "background:#7e8f70;color:#fbf7ee;padding:2px 6px;border-radius:4px 0 0 4px;font-weight:600",
