@@ -51,7 +51,9 @@ export class LwOverviewPage extends LitElement {
         'e w i'
         's s s'
         'm k c';
-      gap: 20px;
+      /* Generous gap — adjacent cards both use 18 px border-radius, so a
+         tight gap visually crowds the corners and reads as "overlapping". */
+      gap: 40px;
       min-height: 0;
     }
     .grid > * { min-width: 0; min-height: 0; }

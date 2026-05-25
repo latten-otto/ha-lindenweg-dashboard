@@ -2772,13 +2772,13 @@ LwScenesRow.styles = i$3`
       display: block;
       width: 100%;
     }
-    /* No card chrome — scenes is a quick-access strip that lives BETWEEN
-       the two card rows. Giving it its own border/background made adjacent
-       rounded corners visually crowd the cards above and below, reading as
-       overlap. The section head + button grid float on the page bg instead. */
     .card {
-      padding: 4px 2px 2px;
+      background: var(--card);
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 16px;
       box-sizing: border-box;
+      overflow: hidden;
     }
     /* auto-fill (not auto-fit): keeps empty tracks so a single scene
        doesn't stretch to the full row width. */
@@ -3944,7 +3944,9 @@ LwOverviewPage.styles = i$3`
         'e w i'
         's s s'
         'm k c';
-      gap: 20px;
+      /* Generous gap — adjacent cards both use 18 px border-radius, so a
+         tight gap visually crowds the corners and reads as "overlapping". */
+      gap: 40px;
       min-height: 0;
     }
     .grid > * { min-width: 0; min-height: 0; }
@@ -7992,7 +7994,7 @@ __decorateClass([
 LindenwegDashboard = __decorateClass([
   t("lindenweg-dashboard")
 ], LindenwegDashboard);
-const VERSION = "0.2.9";
+const VERSION = "0.2.10";
 console.info(
   `%c LINDENWEG-DASHBOARD %c v${VERSION} `,
   "background:#7e8f70;color:#fbf7ee;padding:2px 6px;border-radius:4px 0 0 4px;font-weight:600",
