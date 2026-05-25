@@ -3930,23 +3930,28 @@ LwOverviewPage.styles = i$3`
       flex: 0 0 auto;
     }
 
-    /* CSS Grid layout matching the design entwurf:
-       Row 1 (top)    : energy(1.55fr) · weather(1fr) · infos(1fr)   — min 360px, grows up to 1.3fr
-       Row 2 (scenes) : full-width strip                             — auto height (sizes to content)
-       Row 3 (bottom) : media(1.55fr) · cameras(1fr) · calendar(1fr) — min 260px, grows 1fr */
+    /* Named grid areas — no auto-flow guessing, every card is explicitly
+       placed. Eliminates any chance of items spilling into the wrong row. */
     .grid {
       flex: 1;
       display: grid;
       grid-template-columns: 1.55fr 1fr 1fr;
       grid-template-rows: minmax(360px, 1.3fr) auto minmax(260px, 1fr);
-      gap: 12px;
+      grid-template-areas:
+        'e w i'
+        's s s'
+        'm k c';
+      gap: 16px;
       min-height: 0;
     }
-    /* lw-* elements are placed directly as grid items — no wrapper divs.
-       min-width:0 / min-height:0 lets them shrink below their natural
-       content size, so the grid track widths stay strict. */
     .grid > * { min-width: 0; min-height: 0; }
-    .grid > .scenes { grid-column: 1 / -1; }
+    .grid > .e { grid-area: e; }
+    .grid > .w { grid-area: w; }
+    .grid > .i { grid-area: i; }
+    .grid > .scenes { grid-area: s; }
+    .grid > .m { grid-area: m; }
+    .grid > .k { grid-area: k; }
+    .grid > .c { grid-area: c; }
 
     @keyframes rise {
       from { opacity: 0; transform: translateY(6px); }
@@ -3958,17 +3963,22 @@ LwOverviewPage.styles = i$3`
       .grid {
         grid-template-columns: 1fr 1fr;
         grid-template-rows: minmax(280px, auto) minmax(280px, auto) auto minmax(260px, auto) minmax(260px, auto);
+        grid-template-areas:
+          'e e'
+          'w i'
+          's s'
+          'm m'
+          'k c';
       }
-      .grid > .e { grid-column: 1 / -1; }
-      .grid > .m { grid-column: 1 / -1; }
     }
     @media (max-width: 760px) {
       .grid {
         grid-template-columns: 1fr;
         grid-template-rows: none;
+        grid-template-areas: none;
         grid-auto-rows: minmax(auto, max-content);
       }
-      .grid > * { grid-column: 1 !important; }
+      .grid > * { grid-area: auto !important; grid-column: 1 !important; }
     }
   `;
 __decorateClass$l([

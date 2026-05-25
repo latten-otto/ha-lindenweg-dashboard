@@ -1,7 +1,7 @@
 {
   "domain": "lindenweg_dashboard",
   "name": "Lindenweg Dashboard",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "documentation": "https://github.com/latten-otto/ha-lindenweg-dashboard",
   "issue_tracker": "https://github.com/latten-otto/ha-lindenweg-dashboard/issues",
   "codeowners": ["@latten-otto"],
