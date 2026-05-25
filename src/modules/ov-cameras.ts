@@ -31,6 +31,7 @@ export class LwCamerasCard extends LitElement {
       height: 100%;
       gap: 12px;
       min-width: 0;
+      overflow: hidden;
     }
     .main {
       flex: 1;

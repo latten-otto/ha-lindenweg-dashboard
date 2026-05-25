@@ -56,6 +56,7 @@ export class LwInfosCard extends LitElement {
       height: 100%;
       min-width: 0;
       gap: 12px;
+      overflow: hidden;
     }
     .alarm-modes {
       display: flex;

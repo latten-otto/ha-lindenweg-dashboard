@@ -25,10 +25,10 @@ export class LwOverviewPage extends LitElement {
       overflow: hidden;
     }
     .page {
-      padding: 20px 24px;
+      padding: 22px 24px;
       display: flex;
       flex-direction: column;
-      gap: 22px;
+      gap: 12px;
       height: 100%;
       overflow: auto;
       animation: rise 0.35s ease-out both;
@@ -40,41 +40,21 @@ export class LwOverviewPage extends LitElement {
       flex: 0 0 auto;
     }
 
-    /* Each .band is a horizontal flex row of cards. */
-    .band {
-      display: flex;
-      gap: 22px;
-      min-width: 0;
+    /* CSS Grid layout matching the design entwurf:
+       Row 1 (top)    : energy(1.55fr) · weather(1fr) · infos(1fr)   — min 360px, grows up to 1.3fr
+       Row 2 (scenes) : full-width strip                             — auto height (sizes to content)
+       Row 3 (bottom) : media(1.55fr) · cameras(1fr) · calendar(1fr) — min 260px, grows 1fr */
+    .grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.55fr 1fr 1fr;
+      grid-template-rows: minmax(360px, 1.3fr) auto minmax(260px, 1fr);
+      gap: 12px;
+      min-height: 0;
     }
-    .band > * {
-      min-width: 0;
-    }
-
-    /* Top band: energy (1.4fr) · weather (1fr) · infos (1fr) — at least 380px tall. */
-    .band.top {
-      flex: 0 0 auto;
-      min-height: 380px;
-    }
-    .band.top > .e { flex: 1.4; display: flex; }
-    .band.top > .w { flex: 1; display: flex; }
-    .band.top > .i { flex: 1; display: flex; }
-    .band.top > * > * { width: 100%; }
-
-    /* Middle band: scenes spans full width, content-sized. */
-    .band.middle {
-      flex: 0 0 auto;
-    }
-    .band.middle > * { flex: 1; }
-
-    /* Bottom band: media (1.4fr) · cameras (1fr) · calendar (1fr) — at least 320px. */
-    .band.bottom {
-      flex: 1 1 auto;
-      min-height: 320px;
-    }
-    .band.bottom > .m { flex: 1.4; display: flex; }
-    .band.bottom > .k { flex: 1; display: flex; }
-    .band.bottom > .c { flex: 1; display: flex; }
-    .band.bottom > * > * { width: 100%; }
+    .grid > * { min-width: 0; min-height: 0; display: flex; }
+    .grid > * > * { width: 100%; }
+    .grid > .scenes { grid-column: 1 / -1; }
 
     @keyframes rise {
       from { opacity: 0; transform: translateY(6px); }
@@ -83,16 +63,20 @@ export class LwOverviewPage extends LitElement {
 
     /* Stack on narrower screens. */
     @media (max-width: 1280px) {
-      .band.top { flex-wrap: wrap; }
-      .band.top > .e { flex: 1 1 100%; }
-      .band.top > .w, .band.top > .i { flex: 1 1 calc(50% - 11px); }
-      .band.bottom { flex-wrap: wrap; }
-      .band.bottom > .m { flex: 1 1 100%; }
-      .band.bottom > .k, .band.bottom > .c { flex: 1 1 calc(50% - 11px); }
+      .grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: minmax(280px, auto) minmax(280px, auto) auto minmax(260px, auto) minmax(260px, auto);
+      }
+      .grid > .e { grid-column: 1 / -1; }
+      .grid > .m { grid-column: 1 / -1; }
     }
     @media (max-width: 760px) {
-      .band { flex-direction: column; }
-      .band > * { flex: 1 1 auto !important; }
+      .grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: none;
+        grid-auto-rows: minmax(auto, max-content);
+      }
+      .grid > * { grid-column: 1 !important; }
     }
   `;
 
@@ -121,17 +105,15 @@ export class LwOverviewPage extends LitElement {
           .time=${this.time}
         ></lw-topbar>
 
-        <div class="band top">
+        <div class="grid">
           <div class="e"><lw-energy-card .hass=${this.hass} .energy=${ov.energy ?? {}}></lw-energy-card></div>
           <div class="w"><lw-weather-card .hass=${this.hass} .entity=${ov.weather}></lw-weather-card></div>
           <div class="i"><lw-infos-card .hass=${this.hass} .config=${this.config}></lw-infos-card></div>
-        </div>
 
-        <div class="band middle">
-          <lw-scenes-row .hass=${this.hass} .scenes=${ov.scenes ?? []}></lw-scenes-row>
-        </div>
+          <div class="scenes">
+            <lw-scenes-row .hass=${this.hass} .scenes=${ov.scenes ?? []}></lw-scenes-row>
+          </div>
 
-        <div class="band bottom">
           <div class="m"><lw-media-card .hass=${this.hass} .config=${this.config}></lw-media-card></div>
           <div class="k">
             <lw-cameras-card

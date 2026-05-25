@@ -27,6 +27,7 @@ export class LwClimateCard extends LitElement {
       display: flex;
       flex-direction: column;
       height: 100%;
+      overflow: hidden;
     }
     .grid {
       display: grid;

@@ -35,6 +35,7 @@ export class LwMediaCard extends LitElement {
       gap: 12px;
       height: 100%;
       min-width: 0;
+      overflow: hidden;
     }
     .now {
       display: flex;

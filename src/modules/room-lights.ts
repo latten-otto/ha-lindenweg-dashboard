@@ -57,14 +57,18 @@ export class LwLightsCard extends LitElement {
       height: 100%;
       min-height: 0;
       gap: 14px;
+      overflow: hidden;
     }
+    /* auto-fill (not auto-fit) keeps empty tracks so a lone "Aus"
+       button stays its natural size instead of stretching to full width. */
     .scenes {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 10px;
       flex: 1;
       min-height: 0;
       align-content: center;
+      justify-content: start;
     }
     .btn {
       display: flex;

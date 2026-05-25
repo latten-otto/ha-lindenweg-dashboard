@@ -24,10 +24,10 @@ export class LwRoomPage extends LitElement {
       overflow: hidden;
     }
     .page {
-      padding: 20px 22px;
+      padding: 22px 24px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 12px;
       height: 100%;
       animation: rise 0.35s ease-out both;
     }
@@ -36,7 +36,7 @@ export class LwRoomPage extends LitElement {
        lights card takes the whole row instead of leaving an empty 1fr cell. */
     .row {
       display: flex;
-      gap: 20px;
+      gap: 12px;
       min-height: 0;
     }
     .row.top {
@@ -134,7 +134,7 @@ export class LwRoomPage extends LitElement {
     // ---- Bottom row: extras + (blinds + media-mini), with various fallbacks ----
     const bottomRightHasBoth = hasCovers && hasMedia;
     const bottomRight = bottomRightHasBoth
-      ? html`<div class="row" style="gap:20px; flex:1; min-height:0">
+      ? html`<div class="row" style="gap:12px; flex:1; min-height:0">
           <div class="col-1">
             <lw-blinds-card .hass=${this.hass} .covers=${room.covers!}></lw-blinds-card>
           </div>

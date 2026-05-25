@@ -31,6 +31,7 @@ export class LwMediaMini extends LitElement {
       flex-direction: column;
       height: 100%;
       min-width: 0;
+      overflow: hidden;
     }
     .row {
       display: flex;

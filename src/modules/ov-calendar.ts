@@ -33,6 +33,7 @@ export class LwCalendarCard extends LitElement {
       display: flex;
       flex-direction: column;
       height: 100%;
+      overflow: hidden;
     }
     .list {
       display: flex;

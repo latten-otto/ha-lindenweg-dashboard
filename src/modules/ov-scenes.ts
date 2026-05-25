@@ -32,19 +32,18 @@ export class LwScenesRow extends LitElement {
   static styles = css`
     :host {
       display: block;
-      /* Backstop: the grid row this lives in needs a known height, otherwise
-         min-content can collapse it to 0 and the card paints over adjacent
-         rows visually. */
-      min-height: 130px;
+      width: 100%;
     }
     .card {
       background: var(--card);
       border: 1px solid var(--border-soft);
       border-radius: 18px;
       padding: 16px;
-      height: 100%;
       box-sizing: border-box;
+      overflow: hidden;
     }
+    /* auto-fill (not auto-fit): keeps empty tracks so a single scene
+       doesn't stretch to the full row width. */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
