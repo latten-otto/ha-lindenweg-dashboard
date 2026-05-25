@@ -51,7 +51,7 @@ export class LwOverviewPage extends LitElement {
         'e w i'
         's s s'
         'm k c';
-      gap: 16px;
+      gap: 20px;
       min-height: 0;
     }
     .grid > * { min-width: 0; min-height: 0; }

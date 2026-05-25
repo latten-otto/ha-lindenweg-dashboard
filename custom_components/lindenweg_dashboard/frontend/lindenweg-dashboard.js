@@ -2068,7 +2068,10 @@ LwEnergyCard.styles = i$3`
     }
     .card {
       background: var(--card-elev);
-      box-shadow: var(--shadow);
+      /* Tight shadow — keeps elevation cue without bleeding into the
+         gap below the card, which previously read as "scenes overlap". */
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-soft);
       border-radius: 18px;
       padding: 18px;
       display: flex;
@@ -3941,7 +3944,7 @@ LwOverviewPage.styles = i$3`
         'e w i'
         's s s'
         'm k c';
-      gap: 16px;
+      gap: 20px;
       min-height: 0;
     }
     .grid > * { min-width: 0; min-height: 0; }
@@ -7989,7 +7992,7 @@ __decorateClass([
 LindenwegDashboard = __decorateClass([
   t("lindenweg-dashboard")
 ], LindenwegDashboard);
-const VERSION = "0.2.4";
+const VERSION = "0.2.8";
 console.info(
   `%c LINDENWEG-DASHBOARD %c v${VERSION} `,
   "background:#7e8f70;color:#fbf7ee;padding:2px 6px;border-radius:4px 0 0 4px;font-weight:600",

@@ -20,7 +20,10 @@ export class LwEnergyCard extends LitElement {
     }
     .card {
       background: var(--card-elev);
-      box-shadow: var(--shadow);
+      /* Tight shadow — keeps elevation cue without bleeding into the
+         gap below the card, which previously read as "scenes overlap". */
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-soft);
       border-radius: 18px;
       padding: 18px;
       display: flex;
