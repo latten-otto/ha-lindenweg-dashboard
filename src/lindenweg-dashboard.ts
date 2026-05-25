@@ -3,7 +3,7 @@
 // programmatically and serves this bundle from custom_components/.../frontend/.
 import './panel/dashboard-panel';
 
-const VERSION = '0.2.8';
+const VERSION = '0.2.9';
 // eslint-disable-next-line no-console
 console.info(
   `%c LINDENWEG-DASHBOARD %c v${VERSION} `,
