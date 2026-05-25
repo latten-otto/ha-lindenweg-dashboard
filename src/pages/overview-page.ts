@@ -52,8 +52,10 @@ export class LwOverviewPage extends LitElement {
       gap: 12px;
       min-height: 0;
     }
-    .grid > * { min-width: 0; min-height: 0; display: flex; }
-    .grid > * > * { width: 100%; }
+    /* lw-* elements are placed directly as grid items — no wrapper divs.
+       min-width:0 / min-height:0 lets them shrink below their natural
+       content size, so the grid track widths stay strict. */
+    .grid > * { min-width: 0; min-height: 0; }
     .grid > .scenes { grid-column: 1 / -1; }
 
     @keyframes rise {
@@ -106,23 +108,20 @@ export class LwOverviewPage extends LitElement {
         ></lw-topbar>
 
         <div class="grid">
-          <div class="e"><lw-energy-card .hass=${this.hass} .energy=${ov.energy ?? {}}></lw-energy-card></div>
-          <div class="w"><lw-weather-card .hass=${this.hass} .entity=${ov.weather}></lw-weather-card></div>
-          <div class="i"><lw-infos-card .hass=${this.hass} .config=${this.config}></lw-infos-card></div>
+          <lw-energy-card class="e" .hass=${this.hass} .energy=${ov.energy ?? {}}></lw-energy-card>
+          <lw-weather-card class="w" .hass=${this.hass} .entity=${ov.weather}></lw-weather-card>
+          <lw-infos-card class="i" .hass=${this.hass} .config=${this.config}></lw-infos-card>
 
-          <div class="scenes">
-            <lw-scenes-row .hass=${this.hass} .scenes=${ov.scenes ?? []}></lw-scenes-row>
-          </div>
+          <lw-scenes-row class="scenes" .hass=${this.hass} .scenes=${ov.scenes ?? []}></lw-scenes-row>
 
-          <div class="m"><lw-media-card .hass=${this.hass} .config=${this.config}></lw-media-card></div>
-          <div class="k">
-            <lw-cameras-card
-              .hass=${this.hass}
-              .cameras=${ov.cameras ?? []}
-              .cameraMotion=${ov.camera_motion ?? {}}
-            ></lw-cameras-card>
-          </div>
-          <div class="c"><lw-calendar-card .hass=${this.hass} .entity=${ov.calendar}></lw-calendar-card></div>
+          <lw-media-card class="m" .hass=${this.hass} .config=${this.config}></lw-media-card>
+          <lw-cameras-card
+            class="k"
+            .hass=${this.hass}
+            .cameras=${ov.cameras ?? []}
+            .cameraMotion=${ov.camera_motion ?? {}}
+          ></lw-cameras-card>
+          <lw-calendar-card class="c" .hass=${this.hass} .entity=${ov.calendar}></lw-calendar-card>
         </div>
       </div>
     `;
